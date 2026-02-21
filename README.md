@@ -61,4 +61,4 @@ npm run tauri build
 - `src-tauri/`: Tauri (Rust) backend + app config
 
 ## License
-Private repository. All rights reserved.
+MIT License. See `LICENSE`.
