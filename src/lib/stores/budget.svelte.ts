@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem } from '$lib/types';
+import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction } from '$lib/types';
 
 function createEmptyBudget(name: string): BudgetTemplate {
 	return {
@@ -14,7 +14,8 @@ function createEmptyBudget(name: string): BudgetTemplate {
 			customEntities: []
 		},
 		template: {},
-		comments: {}
+		comments: {},
+		unplanned: {}
 	};
 }
 
@@ -46,6 +47,9 @@ class BudgetStore {
 			}
 			if (!loaded.comments) {
 				loaded.comments = {};
+			}
+			if (!loaded.unplanned) {
+				loaded.unplanned = {};
 			}
 			this.current = loaded;
 			this.dirty = false;
@@ -229,6 +233,43 @@ class BudgetStore {
 		const monthComments = this.current.comments[month];
 		if (!monthComments) return [];
 		return Object.entries(monthComments).map(([uuid, text]) => ({ uuid, text }));
+	}
+
+	markUnplanned(month: string, categoryUuid: string, transactions: UnplannedTransaction[]) {
+		if (!this.current.unplanned[month]) {
+			this.current.unplanned[month] = {};
+		}
+		const existing = this.current.unplanned[month][categoryUuid] ?? [];
+		const existingIds = new Set(existing.map((t) => t.txId));
+		const toAdd = transactions.filter((t) => !existingIds.has(t.txId));
+		if (toAdd.length > 0) {
+			this.current.unplanned[month][categoryUuid] = [...existing, ...toAdd];
+			this.dirty = true;
+		}
+	}
+
+	unmarkUnplanned(month: string, categoryUuid: string, txId: number) {
+		const monthMap = this.current.unplanned[month];
+		if (!monthMap?.[categoryUuid]) return;
+		monthMap[categoryUuid] = monthMap[categoryUuid].filter((t) => t.txId !== txId);
+		if (monthMap[categoryUuid].length === 0) {
+			delete monthMap[categoryUuid];
+		}
+		if (Object.keys(monthMap).length === 0) {
+			delete this.current.unplanned[month];
+		}
+		this.dirty = true;
+	}
+
+	getUnplannedIds(month: string, categoryUuid: string): Set<number> {
+		const txs = this.current.unplanned[month]?.[categoryUuid];
+		return txs ? new Set(txs.map((t) => t.txId)) : new Set();
+	}
+
+	getUnplannedForMonth(month: string): Array<{ categoryUuid: string; transactions: UnplannedTransaction[] }> {
+		const monthMap = this.current.unplanned[month];
+		if (!monthMap) return [];
+		return Object.entries(monthMap).map(([categoryUuid, transactions]) => ({ categoryUuid, transactions }));
 	}
 
 	updateSettings(partial: Partial<BudgetSettings>) {

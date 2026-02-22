@@ -171,7 +171,7 @@
 
 			<!-- Sidebar -->
 			{#if showSettings || showNotes}
-				<div class="w-72 border-l border-border overflow-auto bg-bg-secondary flex flex-col">
+				<div class="w-80 border-l border-border overflow-auto bg-bg-secondary flex flex-col">
 					{#if showNotes}
 						<div class="p-4 {showSettings ? 'border-b border-border' : ''}">
 							<NotesPanel {incomeRows} {expenseRows} />

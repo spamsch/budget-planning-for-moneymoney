@@ -45,6 +45,14 @@ export type Transaction = {
 	checkmark: boolean;
 };
 
+export type UnplannedTransaction = {
+	txId: number;
+	name: string;
+	amount: number;
+	bookingDate: string;
+	purpose: string | null;
+};
+
 // Budget persistence types
 export type LineItem = {
 	id: string;
@@ -76,6 +84,7 @@ export type BudgetTemplate = {
 	settings: BudgetSettings;
 	template: Record<string, TemplateEntry>;
 	comments: Record<string, Record<string, string>>;
+	unplanned: Record<string, Record<string, UnplannedTransaction[]>>;
 };
 
 // Computed types for the UI

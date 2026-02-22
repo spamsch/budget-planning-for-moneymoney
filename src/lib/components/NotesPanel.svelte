@@ -3,7 +3,8 @@
 	import { budget } from '$lib/stores/budget.svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { formatMonthLabel } from '$lib/stores/ui.svelte';
-	import { StickyNote, MessageSquareText } from 'lucide-svelte';
+	import { StickyNote, MessageSquareText, CircleAlert } from 'lucide-svelte';
+	import { formatEur } from '$lib/utils/budgetCalc';
 
 	let {
 		incomeRows,
@@ -78,6 +79,22 @@
 		return items;
 	});
 
+	let unplannedGroups = $derived.by(() => {
+		const groups = budget.getUnplannedForMonth(ui.selectedMonth);
+		const allRows = [...incomeRows, ...expenseRows];
+		return groups.map(({ categoryUuid, transactions }) => {
+			const cat = findCategory(allRows, categoryUuid);
+			const sum = transactions.reduce((s, t) => s + t.amount, 0);
+			return {
+				categoryUuid,
+				name: cat?.name ?? categoryUuid,
+				path: cat?.path ?? '',
+				transactions,
+				sum
+			};
+		});
+	});
+
 	function handleBlur(uuid: string, value: string) {
 		budget.setNote(uuid, value);
 	}
@@ -109,6 +126,47 @@
 							{/if}
 						</button>
 						<p class="text-xs text-text-muted whitespace-pre-wrap">{item.text}</p>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
+	<!-- Unplanned transactions -->
+	<div class="flex flex-col gap-3">
+		<span class="text-xs font-medium text-text-muted uppercase tracking-wider">
+			Ungeplante Transaktionen — {formatMonthLabel(ui.selectedMonth)}
+		</span>
+
+		{#if unplannedGroups.length === 0}
+			<div class="flex flex-col items-center gap-2 py-4 text-text-dim">
+				<CircleAlert size={20} />
+				<p class="text-xs text-center">Keine ungeplanten Transaktionen in diesem Monat</p>
+			</div>
+		{:else}
+			<ul class="flex flex-col gap-2">
+				{#each unplannedGroups as group (group.categoryUuid)}
+					<li class="rounded border border-warning/30 bg-warning/5 px-2.5 py-2">
+						<button
+							class="mb-1 text-left w-full hover:underline"
+							onclick={() => ui.selectCategory(group.categoryUuid)}
+						>
+							<span class="text-sm font-medium text-text">{group.name}</span>
+							{#if group.path}
+								<span class="text-[10px] text-text-dim ml-1">{group.path}</span>
+							{/if}
+						</button>
+						<ul class="flex flex-col gap-0.5">
+							{#each group.transactions as tx (tx.txId)}
+								<li class="flex items-center justify-between text-xs">
+									<span class="text-text-muted truncate mr-2">{tx.name}</span>
+									<span class="font-mono whitespace-nowrap {tx.amount >= 0 ? 'text-positive' : 'text-negative'}">{formatEur(tx.amount)}</span>
+								</li>
+							{/each}
+						</ul>
+						<div class="flex justify-end mt-1 pt-1 border-t border-warning/20">
+							<span class="text-xs font-mono font-medium text-text-muted">{formatEur(group.sum)}</span>
+						</div>
 					</li>
 				{/each}
 			</ul>

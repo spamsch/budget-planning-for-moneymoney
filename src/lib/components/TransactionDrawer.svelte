@@ -3,7 +3,7 @@
 	import { ui } from '$lib/stores/ui.svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { formatEur, getTransactionsForCategory } from '$lib/utils/budgetCalc';
-	import { X } from 'lucide-svelte';
+	import { X, CircleAlert } from 'lucide-svelte';
 
 	type TxMap = Map<string, { total: number; transactions: Transaction[] }>;
 
@@ -91,6 +91,42 @@
 		return transactions.filter(tx => selectedTxIds.has(tx.id)).reduce((s, tx) => s + tx.amount, 0);
 	});
 
+	let unplannedIds = $derived(
+		ui.selectedCategoryUuid ? budget.getUnplannedIds(ui.selectedMonth, ui.selectedCategoryUuid) : new Set<number>()
+	);
+
+	let allSelectedMarked = $derived.by(() => {
+		if (selectedTxIds.size === 0) return false;
+		for (const id of selectedTxIds) {
+			if (!unplannedIds.has(id)) return false;
+		}
+		return true;
+	});
+
+	function handleToggleUnplanned() {
+		const uuid = ui.selectedCategoryUuid;
+		if (!uuid) return;
+		const month = ui.selectedMonth;
+
+		if (allSelectedMarked) {
+			for (const id of selectedTxIds) {
+				budget.unmarkUnplanned(month, uuid, id);
+			}
+		} else {
+			const snapshots = transactions
+				.filter((tx) => selectedTxIds.has(tx.id))
+				.map((tx) => ({
+					txId: tx.id,
+					name: tx.name,
+					amount: tx.amount,
+					bookingDate: tx.bookingDate,
+					purpose: tx.purpose
+				}));
+			budget.markUnplanned(month, uuid, snapshots);
+		}
+		selectedTxIds.clear();
+	}
+
 	function formatDate(dateStr: string): string {
 		const d = new Date(dateStr);
 		return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -142,10 +178,15 @@
 				<tbody>
 					{#each transactions as tx (tx.id)}
 						<tr
-							class="transition-colors border-t border-border/50 cursor-pointer select-none {selectedTxIds.has(tx.id) ? 'bg-accent/15' : 'hover:bg-bg-row-hover'}"
+							class="transition-colors border-t border-border/50 cursor-pointer select-none {selectedTxIds.has(tx.id) ? 'bg-accent/15' : 'hover:bg-bg-row-hover'} {unplannedIds.has(tx.id) ? 'border-l-2 border-l-warning' : ''}"
 							onclick={(e) => toggleTx(tx.id, e)}
 						>
-							<td class="py-1.5 px-4 text-text-muted whitespace-nowrap">{formatDate(tx.bookingDate)}</td>
+							<td class="py-1.5 px-4 text-text-muted whitespace-nowrap">
+								<span class="inline-flex items-center gap-1">
+									{#if unplannedIds.has(tx.id)}<CircleAlert size={12} class="text-warning shrink-0" />{/if}
+									{formatDate(tx.bookingDate)}
+								</span>
+							</td>
 							<td class="py-1.5 px-3 text-text truncate max-w-[200px]">{tx.name}</td>
 							<td class="py-1.5 px-3 text-text-muted truncate max-w-[300px]">{tx.purpose ?? ''}</td>
 							<td class="py-1.5 px-4 text-right font-mono whitespace-nowrap {tx.amount >= 0 ? 'text-positive' : 'text-negative'}">
@@ -161,7 +202,15 @@
 	{#if selectedTxIds.size > 0}
 		<div class="flex items-center justify-between px-4 py-1.5 border-t border-accent/30 bg-accent/10 text-xs">
 			<span class="text-text-muted">{selectedTxIds.size} ausgewählt</span>
-			<span class="font-mono font-medium text-accent">{formatEur(selectedSum)}</span>
+			<div class="flex items-center gap-3">
+				<button
+					onclick={handleToggleUnplanned}
+					class="text-warning hover:text-warning/80 font-medium transition-colors"
+				>
+					{allSelectedMarked ? 'Markierung aufheben' : 'Als ungeplant markieren'}
+				</button>
+				<span class="font-mono font-medium text-accent">{formatEur(selectedSum)}</span>
+			</div>
 		</div>
 	{/if}
 

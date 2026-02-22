@@ -6,6 +6,16 @@ use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct UnplannedTransaction {
+    pub tx_id: i64,
+    pub name: String,
+    pub amount: f64,
+    pub booking_date: String,
+    pub purpose: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BudgetTemplate {
     pub name: String,
     pub version: String,
@@ -13,6 +23,8 @@ pub struct BudgetTemplate {
     pub template: HashMap<String, TemplateEntry>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub comments: HashMap<String, HashMap<String, String>>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub unplanned: HashMap<String, HashMap<String, Vec<UnplannedTransaction>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
