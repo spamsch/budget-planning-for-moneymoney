@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Save, RefreshCw, Route, Settings, StickyNote } from 'lucide-svelte';
+	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
@@ -11,10 +11,6 @@
 		showSettings?: boolean;
 		showNotes?: boolean;
 	} = $props();
-
-	async function handleSave() {
-		await budget.saveBudget();
-	}
 
 	let editing = $state(false);
 	let editValue = $state('');
@@ -65,9 +61,6 @@
 			>
 				{budget.current.name}
 			</h1>
-		{/if}
-		{#if budget.dirty}
-			<span class="text-xs text-warning">unsaved</span>
 		{/if}
 	</div>
 
@@ -121,16 +114,15 @@
 			Aktualisieren
 		</button>
 
-		<button
-			onclick={handleSave}
-			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {budget.dirty
-				? 'bg-accent text-white hover:bg-accent-hover'
-				: 'text-text-muted hover:text-text hover:bg-bg-tertiary'}"
-			disabled={budget.saving}
-			title="Save budget (⌘S)"
-		>
-			<Save size={14} />
-			Speichern
-		</button>
+		{#if budget.saveStatus === 'saving'}
+			<span class="flex items-center gap-1.5 text-xs text-text-dim">
+				<LoaderCircle size={14} class="animate-spin" />
+				Speichern…
+			</span>
+		{:else if budget.lastSavedAt}
+			<span class="text-[10px] text-text-dim">
+				Gespeichert {budget.lastSavedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+			</span>
+		{/if}
 	</div>
 </div>

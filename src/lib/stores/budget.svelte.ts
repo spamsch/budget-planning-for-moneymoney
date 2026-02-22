@@ -23,8 +23,30 @@ class BudgetStore {
 	current = $state<BudgetTemplate>(createEmptyBudget('family'));
 	budgetNames = $state<string[]>([]);
 	dirty = $state(false);
-	saving = $state(false);
+	saveStatus = $state<'idle' | 'saving'>('idle');
+	lastSavedAt = $state<Date | null>(null);
 	error = $state<string | null>(null);
+
+	private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	private _clearTimers() {
+		if (this._debounceTimer) {
+			clearTimeout(this._debounceTimer);
+			this._debounceTimer = null;
+		}
+	}
+
+	private _markDirty() {
+		this.dirty = true;
+		this.saveStatus = 'idle';
+		if (this._debounceTimer) {
+			clearTimeout(this._debounceTimer);
+		}
+		this._debounceTimer = setTimeout(() => {
+			this._debounceTimer = null;
+			this.saveBudget();
+		}, 1500);
+	}
 
 	async listBudgets() {
 		try {
@@ -35,6 +57,7 @@ class BudgetStore {
 	}
 
 	async loadBudget(name: string) {
+		this._clearTimers();
 		try {
 			this.error = null;
 			const loaded = await invoke<BudgetTemplate>('load_budget', { name });
@@ -61,16 +84,21 @@ class BudgetStore {
 	}
 
 	async saveBudget() {
+		if (this._debounceTimer) {
+			clearTimeout(this._debounceTimer);
+			this._debounceTimer = null;
+		}
 		try {
-			this.saving = true;
+			this.saveStatus = 'saving';
 			this.error = null;
 			await invoke('save_budget', { budget: this.current });
 			this.dirty = false;
+			this.lastSavedAt = new Date();
+			this.saveStatus = 'idle';
 			await this.listBudgets();
 		} catch (e) {
+			this.saveStatus = 'idle';
 			this.error = `Failed to save budget: ${e}`;
-		} finally {
-			this.saving = false;
 		}
 	}
 
@@ -90,7 +118,7 @@ class BudgetStore {
 		} else {
 			this.current.template[uuid] = { amount };
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	addLineItem(uuid: string): string {
@@ -105,7 +133,7 @@ class BudgetStore {
 		}
 
 		this._recomputeLineItemSum(entry);
-		this.dirty = true;
+		this._markDirty();
 		return id;
 	}
 
@@ -121,7 +149,7 @@ class BudgetStore {
 		if (updates.description !== undefined) item.description = updates.description;
 
 		this._recomputeLineItemSum(entry);
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	removeLineItem(uuid: string, itemId: string) {
@@ -135,7 +163,7 @@ class BudgetStore {
 		}
 
 		this._recomputeLineItemSum(entry);
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	private _recomputeLineItemSum(entry: TemplateEntry) {
@@ -156,7 +184,7 @@ class BudgetStore {
 		} else if (existing) {
 			delete existing.note;
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	setSourceAccount(uuid: string, accountUuid: string | undefined) {
@@ -166,7 +194,7 @@ class BudgetStore {
 		} else {
 			this.current.template[uuid] = { amount: 0, sourceAccount: accountUuid };
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	setTargetAccount(uuid: string, accountUuid: string | undefined) {
@@ -176,14 +204,14 @@ class BudgetStore {
 		} else {
 			this.current.template[uuid] = { amount: 0, targetAccount: accountUuid };
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	addCustomEntity(name: string) {
 		const trimmed = name.trim();
 		if (trimmed && !this.current.settings.customEntities.includes(trimmed)) {
 			this.current.settings.customEntities = [...this.current.settings.customEntities, trimmed];
-			this.dirty = true;
+			this._markDirty();
 		}
 	}
 
@@ -191,7 +219,7 @@ class BudgetStore {
 		this.current.settings.customEntities = this.current.settings.customEntities.filter(
 			(e) => e !== name
 		);
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	toggleExcludedCategory(uuid: string) {
@@ -201,12 +229,12 @@ class BudgetStore {
 		} else {
 			this.current.settings.excludedCategories = [...current, uuid];
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	removeTemplateEntry(uuid: string) {
 		delete this.current.template[uuid];
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	setComment(month: string, uuid: string, text: string) {
@@ -222,7 +250,7 @@ class BudgetStore {
 				delete this.current.comments[month];
 			}
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	getComment(month: string, uuid: string): string {
@@ -244,7 +272,7 @@ class BudgetStore {
 		const toAdd = transactions.filter((t) => !existingIds.has(t.txId));
 		if (toAdd.length > 0) {
 			this.current.unplanned[month][categoryUuid] = [...existing, ...toAdd];
-			this.dirty = true;
+			this._markDirty();
 		}
 	}
 
@@ -258,7 +286,7 @@ class BudgetStore {
 		if (Object.keys(monthMap).length === 0) {
 			delete this.current.unplanned[month];
 		}
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	getUnplannedIds(month: string, categoryUuid: string): Set<number> {
@@ -274,7 +302,7 @@ class BudgetStore {
 
 	updateSettings(partial: Partial<BudgetSettings>) {
 		this.current.settings = { ...this.current.settings, ...partial };
-		this.dirty = true;
+		this._markDirty();
 	}
 
 	async renameBudget(newName: string) {
@@ -283,23 +311,24 @@ class BudgetStore {
 		const oldName = this.current.name;
 		this.current.name = trimmed;
 		try {
-			this.saving = true;
+			this.saveStatus = 'saving';
 			this.error = null;
 			await invoke('save_budget', { budget: this.current });
 			await invoke('delete_budget', { name: oldName });
 			this.dirty = false;
+			this.lastSavedAt = new Date();
+			this.saveStatus = 'idle';
 			await this.listBudgets();
 		} catch (e) {
 			this.current.name = oldName;
+			this.saveStatus = 'idle';
 			this.error = `Failed to rename budget: ${e}`;
-		} finally {
-			this.saving = false;
 		}
 	}
 
 	createNew(name: string) {
 		this.current = createEmptyBudget(name);
-		this.dirty = true;
+		this._markDirty();
 	}
 }
 
