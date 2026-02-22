@@ -15,9 +15,12 @@
 	import BudgetView from '$lib/components/BudgetView.svelte';
 	import AccountSelector from '$lib/components/AccountSelector.svelte';
 	import EntityManager from '$lib/components/EntityManager.svelte';
+	import NotesPanel from '$lib/components/NotesPanel.svelte';
+	import TransactionDrawer from '$lib/components/TransactionDrawer.svelte';
 
 	let initialized = $state(false);
 	let showSettings = $state(false);
+	let showNotes = $state(false);
 
 	// Derived: split tree into income/expense
 	let treeGroups = $derived.by(() => {
@@ -122,7 +125,7 @@
 </script>
 
 <div class="flex flex-col h-full bg-bg">
-	<Toolbar bind:showSettings />
+	<Toolbar bind:showSettings bind:showNotes />
 
 	{#if mm.error}
 		<div class="flex items-center gap-3 px-4 py-3 bg-warning/10 border-b border-warning/30">
@@ -161,17 +164,27 @@
 			<!-- Main budget table -->
 			<div class="flex-1 overflow-hidden flex flex-col">
 				<BudgetView {incomeRows} {expenseRows} accounts={mm.accounts} />
+				{#if ui.selectedCategoryUuid}
+					<TransactionDrawer {incomeRows} {expenseRows} {txMap} />
+				{/if}
 			</div>
 
-			<!-- Settings sidebar -->
-			{#if showSettings}
+			<!-- Sidebar -->
+			{#if showSettings || showNotes}
 				<div class="w-72 border-l border-border overflow-auto bg-bg-secondary flex flex-col">
-					<div class="p-4 border-b border-border">
-						<AccountSelector accounts={mm.accounts} />
-					</div>
-					<div class="p-4">
-						<EntityManager />
-					</div>
+					{#if showNotes}
+						<div class="p-4 {showSettings ? 'border-b border-border' : ''}">
+							<NotesPanel {incomeRows} {expenseRows} />
+						</div>
+					{/if}
+					{#if showSettings}
+						<div class="p-4 border-b border-border">
+							<AccountSelector accounts={mm.accounts} />
+						</div>
+						<div class="p-4">
+							<EntityManager />
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>

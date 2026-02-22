@@ -46,6 +46,8 @@ pub struct TemplateEntry {
     pub target_account: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub line_items: Vec<LineItem>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 fn budgets_dir() -> Result<PathBuf, String> {

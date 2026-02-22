@@ -4,7 +4,10 @@ class UiStore {
 	selectedMonth = $state(getCurrentMonth());
 	collapsedGroups = new SvelteSet<string>();
 	expandedLineItems = new SvelteSet<string>();
+	expandedNotes = new SvelteSet<string>();
 	showAccountRouting = $state(false);
+	showNotes = $state(false);
+	selectedCategoryUuid = $state<string | null>(null);
 
 	setMonth(month: string) {
 		this.selectedMonth = month;
@@ -42,8 +45,32 @@ class UiStore {
 		return this.expandedLineItems.has(uuid);
 	}
 
+	toggleNote(uuid: string) {
+		if (this.expandedNotes.has(uuid)) {
+			this.expandedNotes.delete(uuid);
+		} else {
+			this.expandedNotes.add(uuid);
+		}
+	}
+
+	isNoteExpanded(uuid: string): boolean {
+		return this.expandedNotes.has(uuid);
+	}
+
+	toggleNotesPanel() {
+		this.showNotes = !this.showNotes;
+	}
+
 	toggleAccountRouting() {
 		this.showAccountRouting = !this.showAccountRouting;
+	}
+
+	selectCategory(uuid: string) {
+		this.selectedCategoryUuid = this.selectedCategoryUuid === uuid ? null : uuid;
+	}
+
+	clearSelection() {
+		this.selectedCategoryUuid = null;
 	}
 }
 

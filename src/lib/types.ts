@@ -58,6 +58,7 @@ export type TemplateEntry = {
 	sourceAccount?: string;
 	targetAccount?: string;
 	lineItems?: LineItem[];
+	note?: string;
 };
 
 export type BudgetSettings = {
@@ -91,6 +92,7 @@ export type CategoryBudgetRow = {
 	sourceAccount?: string;
 	targetAccount?: string;
 	lineItems?: LineItem[];
+	note?: string;
 };
 
 export type MonthSummary = {

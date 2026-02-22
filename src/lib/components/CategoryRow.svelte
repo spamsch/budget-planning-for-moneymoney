@@ -3,7 +3,7 @@
 	import { budget } from '$lib/stores/budget.svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { formatEur } from '$lib/utils/budgetCalc';
-	import { ChevronDown, ChevronRight, ListPlus, Plus, Eye, EyeOff } from 'lucide-svelte';
+	import { ChevronDown, ChevronRight, ListPlus, Plus, Eye, EyeOff, StickyNote } from 'lucide-svelte';
 	import LineItemRow from './LineItemRow.svelte';
 
 	const ADD_NEW = '__add_new__';
@@ -22,6 +22,26 @@
 
 	let hasLineItems = $derived(row.lineItems && row.lineItems.length > 0);
 	let expanded = $derived(ui.isLineItemsExpanded(row.uuid));
+	let hasNote = $derived(!!row.note);
+	let noteExpanded = $derived(ui.isNoteExpanded(row.uuid));
+	let noteValue = $state('');
+
+	function openNote() {
+		noteValue = row.note ?? '';
+		if (!noteExpanded) ui.toggleNote(row.uuid);
+	}
+
+	function commitNote() {
+		budget.setNote(row.uuid, noteValue);
+		if (!noteValue.trim()) ui.toggleNote(row.uuid);
+	}
+
+	function handleNoteKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') {
+			noteValue = row.note ?? '';
+			ui.toggleNote(row.uuid);
+		}
+	}
 
 	function startEdit() {
 		if (hasLineItems) return; // read-only when line items exist
@@ -81,6 +101,7 @@
 	}
 
 	let isExcluded = $derived(!!row.excluded);
+	let isSelected = $derived(ui.selectedCategoryUuid === row.uuid);
 
 	let diffColor = $derived(
 		row.excluded
@@ -99,7 +120,7 @@
 	let customEntities = $derived(budget.current.settings.customEntities ?? []);
 </script>
 
-<tr class="hover:bg-bg-row-hover transition-colors group {isExcluded ? 'opacity-50' : ''}">
+<tr class="hover:bg-bg-row-hover transition-colors group {isExcluded ? 'opacity-50' : ''} {isSelected ? 'border-l-2 border-l-accent bg-accent/5' : ''}">
 	<td class="py-1.5 pr-2 text-sm" style="padding-left: {indent}">
 		<span class="inline-flex items-center gap-1">
 			{#if hasLineItems}
@@ -116,14 +137,19 @@
 			{/if}
 			{#if hasLineItems}
 				<button
-					onclick={() => ui.toggleLineItems(row.uuid)}
+					onclick={() => ui.selectCategory(row.uuid)}
 					class="hover:text-text cursor-pointer"
 				>
 					{row.name}
 				</button>
 				<span class="text-[10px] text-text-dim ml-0.5">({row.lineItems!.length})</span>
 			{:else}
-				{row.name}
+				<button
+					onclick={() => ui.selectCategory(row.uuid)}
+					class="hover:text-text cursor-pointer"
+				>
+					{row.name}
+				</button>
 				{#if !isExcluded}
 					<button
 						onclick={handleAddLineItem}
@@ -134,6 +160,13 @@
 					</button>
 				{/if}
 			{/if}
+			<button
+				onclick={(e) => { e.stopPropagation(); openNote(); }}
+				class="{hasNote ? 'opacity-100 text-accent' : 'opacity-0 group-hover:opacity-100 text-text-dim'} transition-opacity hover:text-accent p-0.5"
+				title="Notiz"
+			>
+				<StickyNote size={14} />
+			</button>
 			<button
 				onclick={(e) => { e.stopPropagation(); budget.toggleExcludedCategory(row.uuid); }}
 				class="{isExcluded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity text-text-dim hover:text-accent p-0.5"
@@ -225,6 +258,22 @@
 		</td>
 	{/if}
 </tr>
+
+{#if noteExpanded}
+	<tr class="bg-bg-secondary/50">
+		<td colspan={ui.showAccountRouting ? 6 : 4} class="py-1.5 px-2" style="padding-left: {indent}">
+			<textarea
+				class="w-full bg-bg-input border border-border rounded px-2 py-1 text-sm text-text focus:outline-none focus:border-accent resize-y min-h-[2rem]"
+				rows="2"
+				placeholder="Notiz eingeben…"
+				bind:value={noteValue}
+				onblur={commitNote}
+				onkeydown={handleNoteKeydown}
+				onfocus={() => { noteValue = row.note ?? ''; }}
+			></textarea>
+		</td>
+	</tr>
+{/if}
 
 {#if hasLineItems && expanded}
 	{#each row.lineItems! as item (item.id)}

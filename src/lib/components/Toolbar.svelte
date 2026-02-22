@@ -1,10 +1,16 @@
 <script lang="ts">
-	import { Save, RefreshCw, Route, Settings } from 'lucide-svelte';
+	import { Save, RefreshCw, Route, Settings, StickyNote } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 
-	let { showSettings = $bindable(false) }: { showSettings?: boolean } = $props();
+	let {
+		showSettings = $bindable(false),
+		showNotes = $bindable(false)
+	}: {
+		showSettings?: boolean;
+		showNotes?: boolean;
+	} = $props();
 
 	async function handleSave() {
 		await budget.saveBudget();
@@ -36,6 +42,17 @@
 		>
 			<Route size={14} />
 			Konten
+		</button>
+
+		<button
+			onclick={() => (showNotes = !showNotes)}
+			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {showNotes
+				? 'bg-accent/20 text-accent'
+				: 'text-text-muted hover:text-text hover:bg-bg-tertiary'}"
+			title="Notizen"
+		>
+			<StickyNote size={14} />
+			Notizen
 		</button>
 
 		<button

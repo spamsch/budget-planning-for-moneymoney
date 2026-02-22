@@ -99,7 +99,8 @@ export function computeCategoryRows(
 			excluded,
 			sourceAccount: template[node.uuid]?.sourceAccount,
 			targetAccount: template[node.uuid]?.targetAccount,
-			lineItems: template[node.uuid]?.lineItems
+			lineItems: template[node.uuid]?.lineItems,
+			note: template[node.uuid]?.note
 		};
 	});
 }
@@ -138,6 +139,65 @@ export function computeMonthSummary(
 		netPlanned: totalIncomePlanned - totalExpensesPlanned,
 		netActual: totalIncomeActual - totalExpensesActual
 	};
+}
+
+/**
+ * Recursively find a CategoryBudgetRow by UUID in a tree of rows.
+ */
+export function findRowByUuid(
+	rows: CategoryBudgetRow[],
+	uuid: string
+): CategoryBudgetRow | undefined {
+	for (const row of rows) {
+		if (row.uuid === uuid) return row;
+		if (row.children.length > 0) {
+			const found = findRowByUuid(row.children, uuid);
+			if (found) return found;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Collect leaf category UUIDs from a budget row.
+ * Groups recurse into children; leaves return their own UUID.
+ */
+export function collectLeafUuids(row: CategoryBudgetRow): string[] {
+	if (row.group && row.children.length > 0) {
+		return row.children.flatMap(collectLeafUuids);
+	}
+	return [row.uuid];
+}
+
+/**
+ * Get all transactions for a category (including descendants for groups).
+ * Returns deduplicated transactions sorted by bookingDate descending.
+ */
+export function getTransactionsForCategory(
+	uuid: string,
+	allRows: CategoryBudgetRow[],
+	txMap: TxMap
+): { row: CategoryBudgetRow | undefined; transactions: Transaction[] } {
+	const row = findRowByUuid(allRows, uuid);
+	if (!row) return { row: undefined, transactions: [] };
+
+	const leafUuids = collectLeafUuids(row);
+	const seen = new Set<number>();
+	const transactions: Transaction[] = [];
+
+	for (const leafUuid of leafUuids) {
+		const entry = txMap.get(leafUuid);
+		if (!entry) continue;
+		for (const tx of entry.transactions) {
+			if (!seen.has(tx.id)) {
+				seen.add(tx.id);
+				transactions.push(tx);
+			}
+		}
+	}
+
+	transactions.sort((a, b) => b.bookingDate.localeCompare(a.bookingDate));
+	return { row, transactions };
 }
 
 /**

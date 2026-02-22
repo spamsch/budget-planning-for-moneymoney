@@ -9,6 +9,7 @@
 
 	let collapsed = $derived(ui.isCollapsed(row.uuid));
 	let isExcluded = $derived(!!row.excluded);
+	let isSelected = $derived(ui.selectedCategoryUuid === row.uuid);
 
 	let diffColor = $derived(
 		row.excluded
@@ -20,17 +21,20 @@
 </script>
 
 <tr
-	class="hover:bg-bg-row-hover transition-colors cursor-pointer group {isExcluded ? 'opacity-50' : ''}"
-	onclick={() => ui.toggleGroup(row.uuid)}
+	class="hover:bg-bg-row-hover transition-colors cursor-pointer group {isExcluded ? 'opacity-50' : ''} {isSelected ? 'border-l-2 border-l-accent bg-accent/5' : ''}"
 >
 	<td class="py-1.5 pr-2 text-sm font-medium" style="padding-left: {indent}">
 		<span class="inline-flex items-center gap-1">
-			{#if collapsed}
-				<ChevronRight size={14} class="text-text-dim" />
-			{:else}
-				<ChevronDown size={14} class="text-text-dim" />
-			{/if}
-			{row.name}
+			<button onclick={() => ui.toggleGroup(row.uuid)} class="p-0 text-text-dim hover:text-text">
+				{#if collapsed}
+					<ChevronRight size={14} />
+				{:else}
+					<ChevronDown size={14} />
+				{/if}
+			</button>
+			<button onclick={() => ui.selectCategory(row.uuid)} class="hover:text-text cursor-pointer font-medium">
+				{row.name}
+			</button>
 			<button
 				onclick={(e) => { e.stopPropagation(); budget.toggleExcludedCategory(row.uuid); }}
 				class="{isExcluded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity text-text-dim hover:text-accent p-0.5"

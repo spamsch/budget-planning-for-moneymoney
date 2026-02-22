@@ -136,6 +136,21 @@ class BudgetStore {
 		}
 	}
 
+	setNote(uuid: string, note: string) {
+		const trimmed = note.trim();
+		const existing = this.current.template[uuid];
+		if (trimmed) {
+			if (existing) {
+				existing.note = trimmed;
+			} else {
+				this.current.template[uuid] = { amount: 0, note: trimmed };
+			}
+		} else if (existing) {
+			delete existing.note;
+		}
+		this.dirty = true;
+	}
+
 	setSourceAccount(uuid: string, accountUuid: string | undefined) {
 		const existing = this.current.template[uuid];
 		if (existing) {
