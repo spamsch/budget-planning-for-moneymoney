@@ -13,7 +13,8 @@ function createEmptyBudget(name: string): BudgetTemplate {
 			startDate: new Date().toISOString().slice(0, 7),
 			customEntities: []
 		},
-		template: {}
+		template: {},
+		comments: {}
 	};
 }
 
@@ -42,6 +43,9 @@ class BudgetStore {
 			}
 			if (!loaded.settings.excludedCategories) {
 				loaded.settings.excludedCategories = [];
+			}
+			if (!loaded.comments) {
+				loaded.comments = {};
 			}
 			this.current = loaded;
 			this.dirty = false;
@@ -199,6 +203,32 @@ class BudgetStore {
 	removeTemplateEntry(uuid: string) {
 		delete this.current.template[uuid];
 		this.dirty = true;
+	}
+
+	setComment(month: string, uuid: string, text: string) {
+		const trimmed = text.trim();
+		if (trimmed) {
+			if (!this.current.comments[month]) {
+				this.current.comments[month] = {};
+			}
+			this.current.comments[month][uuid] = trimmed;
+		} else if (this.current.comments[month]) {
+			delete this.current.comments[month][uuid];
+			if (Object.keys(this.current.comments[month]).length === 0) {
+				delete this.current.comments[month];
+			}
+		}
+		this.dirty = true;
+	}
+
+	getComment(month: string, uuid: string): string {
+		return this.current.comments[month]?.[uuid] ?? '';
+	}
+
+	getCommentsForMonth(month: string): Array<{ uuid: string; text: string }> {
+		const monthComments = this.current.comments[month];
+		if (!monthComments) return [];
+		return Object.entries(monthComments).map(([uuid, text]) => ({ uuid, text }));
 	}
 
 	updateSettings(partial: Partial<BudgetSettings>) {

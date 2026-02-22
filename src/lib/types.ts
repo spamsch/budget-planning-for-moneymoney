@@ -75,6 +75,7 @@ export type BudgetTemplate = {
 	version: string;
 	settings: BudgetSettings;
 	template: Record<string, TemplateEntry>;
+	comments: Record<string, Record<string, string>>;
 };
 
 // Computed types for the UI

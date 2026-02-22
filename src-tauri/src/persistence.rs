@@ -11,6 +11,8 @@ pub struct BudgetTemplate {
     pub version: String,
     pub settings: BudgetSettings,
     pub template: HashMap<String, TemplateEntry>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub comments: HashMap<String, HashMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

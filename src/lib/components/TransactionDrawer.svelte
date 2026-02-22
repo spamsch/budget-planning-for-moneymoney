@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CategoryBudgetRow, Transaction } from '$lib/types';
 	import { ui } from '$lib/stores/ui.svelte';
+	import { budget } from '$lib/stores/budget.svelte';
 	import { formatEur, getTransactionsForCategory } from '$lib/utils/budgetCalc';
 	import { X } from 'lucide-svelte';
 
@@ -26,6 +27,69 @@
 
 	let categoryName = $derived(result.row?.name ?? '');
 	let transactions = $derived(result.transactions);
+	let currentComment = $derived(
+		ui.selectedCategoryUuid ? budget.getComment(ui.selectedMonth, ui.selectedCategoryUuid) : ''
+	);
+
+	function handleCommentBlur(e: FocusEvent) {
+		const value = (e.target as HTMLTextAreaElement).value;
+		if (ui.selectedCategoryUuid) {
+			budget.setComment(ui.selectedMonth, ui.selectedCategoryUuid, value);
+		}
+	}
+
+	let height = $state(250);
+	let dragging = $state(false);
+	let startY = 0;
+	let startHeight = 0;
+
+	function onPointerDown(e: PointerEvent) {
+		dragging = true;
+		startY = e.clientY;
+		startHeight = height;
+		(e.target as HTMLElement).setPointerCapture(e.pointerId);
+	}
+
+	function onPointerMove(e: PointerEvent) {
+		if (!dragging) return;
+		const delta = startY - e.clientY;
+		height = Math.max(120, Math.min(startHeight + delta, window.innerHeight * 0.7));
+	}
+
+	function onPointerUp() {
+		dragging = false;
+	}
+
+	import { SvelteSet } from 'svelte/reactivity';
+
+	let selectedTxIds = new SvelteSet<number>();
+
+	// Clear selection when category changes
+	$effect(() => {
+		ui.selectedCategoryUuid;
+		selectedTxIds.clear();
+	});
+
+	function toggleTx(id: number, e: MouseEvent) {
+		if (e.shiftKey) {
+			// Shift-click: toggle individual
+			if (selectedTxIds.has(id)) selectedTxIds.delete(id);
+			else selectedTxIds.add(id);
+		} else {
+			// Plain click: exclusive select, or deselect if already the only one
+			if (selectedTxIds.size === 1 && selectedTxIds.has(id)) {
+				selectedTxIds.clear();
+			} else {
+				selectedTxIds.clear();
+				selectedTxIds.add(id);
+			}
+		}
+	}
+
+	let selectedSum = $derived.by(() => {
+		if (selectedTxIds.size === 0) return 0;
+		return transactions.filter(tx => selectedTxIds.has(tx.id)).reduce((s, tx) => s + tx.amount, 0);
+	});
 
 	function formatDate(dateStr: string): string {
 		const d = new Date(dateStr);
@@ -33,7 +97,18 @@
 	}
 </script>
 
-<div class="h-[250px] border-t border-border bg-bg-secondary flex flex-col shrink-0">
+<div class="border-t border-border bg-bg-secondary flex flex-col shrink-0" style:height="{height}px">
+	<!-- Resize handle -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="h-1.5 cursor-row-resize flex items-center justify-center hover:bg-accent/20 transition-colors shrink-0 {dragging ? 'bg-accent/20' : ''}"
+		onpointerdown={onPointerDown}
+		onpointermove={onPointerMove}
+		onpointerup={onPointerUp}
+	>
+		<div class="w-8 h-0.5 rounded-full bg-text-dim/40"></div>
+	</div>
+
 	<!-- Header -->
 	<div class="flex items-center justify-between px-4 py-2 border-b border-border">
 		<div class="flex items-center gap-2 text-sm">
@@ -66,7 +141,10 @@
 				</thead>
 				<tbody>
 					{#each transactions as tx (tx.id)}
-						<tr class="hover:bg-bg-row-hover transition-colors border-t border-border/50">
+						<tr
+							class="transition-colors border-t border-border/50 cursor-pointer select-none {selectedTxIds.has(tx.id) ? 'bg-accent/15' : 'hover:bg-bg-row-hover'}"
+							onclick={(e) => toggleTx(tx.id, e)}
+						>
 							<td class="py-1.5 px-4 text-text-muted whitespace-nowrap">{formatDate(tx.bookingDate)}</td>
 							<td class="py-1.5 px-3 text-text truncate max-w-[200px]">{tx.name}</td>
 							<td class="py-1.5 px-3 text-text-muted truncate max-w-[300px]">{tx.purpose ?? ''}</td>
@@ -79,4 +157,22 @@
 			</table>
 		</div>
 	{/if}
+
+	{#if selectedTxIds.size > 0}
+		<div class="flex items-center justify-between px-4 py-1.5 border-t border-accent/30 bg-accent/10 text-xs">
+			<span class="text-text-muted">{selectedTxIds.size} ausgewählt</span>
+			<span class="font-mono font-medium text-accent">{formatEur(selectedSum)}</span>
+		</div>
+	{/if}
+
+	<!-- Monthly comment -->
+	<div class="px-4 py-2 border-t border-border">
+		<textarea
+			class="w-full bg-bg-input border border-border rounded px-2 py-1 text-xs text-text focus:outline-none focus:border-accent resize-none"
+			rows="2"
+			placeholder="Kommentar für diesen Monat…"
+			value={currentComment}
+			onblur={handleCommentBlur}
+		></textarea>
+	</div>
 </div>
