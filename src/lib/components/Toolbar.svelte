@@ -16,6 +16,28 @@
 		await budget.saveBudget();
 	}
 
+	let editing = $state(false);
+	let editValue = $state('');
+
+	function startRename() {
+		editValue = budget.current.name;
+		editing = true;
+	}
+
+	async function commitRename() {
+		editing = false;
+		await budget.renameBudget(editValue);
+	}
+
+	function handleRenameKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			(e.target as HTMLInputElement).blur();
+		} else if (e.key === 'Escape') {
+			editing = false;
+		}
+	}
+
 	async function handleRefresh() {
 		mm.clearCache();
 		await mm.refresh();
@@ -26,9 +48,24 @@
 
 <div class="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-secondary">
 	<div class="flex items-center gap-3">
-		<h1 class="text-lg font-semibold">
-			{budget.current.name}
-		</h1>
+		{#if editing}
+			<input
+				type="text"
+				bind:value={editValue}
+				onblur={commitRename}
+				onkeydown={handleRenameKeydown}
+				class="text-lg font-semibold bg-transparent border-b border-accent outline-none px-0 py-0"
+				autofocus
+			/>
+		{:else}
+			<h1
+				class="text-lg font-semibold cursor-pointer hover:text-accent transition-colors"
+				ondblclick={startRename}
+				title="Doppelklick zum Umbenennen"
+			>
+				{budget.current.name}
+			</h1>
+		{/if}
 		{#if budget.dirty}
 			<span class="text-xs text-warning">unsaved</span>
 		{/if}
