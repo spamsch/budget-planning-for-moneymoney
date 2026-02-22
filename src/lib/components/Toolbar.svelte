@@ -2,7 +2,7 @@
 	import { Save, RefreshCw, Route, Settings, StickyNote } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
-	import { ui } from '$lib/stores/ui.svelte';
+	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
 
 	let {
 		showSettings = $bindable(false),
@@ -19,6 +19,8 @@
 	async function handleRefresh() {
 		mm.clearCache();
 		await mm.refresh();
+		const { from, to } = monthToDateRange(ui.selectedMonth);
+		await mm.fetchTransactions(from, to, budget.current.settings.accounts);
 	}
 </script>
 
@@ -65,6 +67,12 @@
 			<Settings size={14} />
 			Kontakte
 		</button>
+
+		{#if mm.lastRefresh}
+			<span class="text-[10px] text-text-dim" title="Letzte Aktualisierung">
+				{mm.lastRefresh.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+			</span>
+		{/if}
 
 		<button
 			onclick={handleRefresh}
