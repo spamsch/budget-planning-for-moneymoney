@@ -236,9 +236,24 @@ class BudgetStore {
 		this.dirty = true;
 	}
 
-	setName(name: string) {
-		this.current.name = name;
-		this.dirty = true;
+	async renameBudget(newName: string) {
+		const trimmed = newName.trim();
+		if (!trimmed || trimmed === this.current.name) return;
+		const oldName = this.current.name;
+		this.current.name = trimmed;
+		try {
+			this.saving = true;
+			this.error = null;
+			await invoke('save_budget', { budget: this.current });
+			await invoke('delete_budget', { name: oldName });
+			this.dirty = false;
+			await this.listBudgets();
+		} catch (e) {
+			this.current.name = oldName;
+			this.error = `Failed to rename budget: ${e}`;
+		} finally {
+			this.saving = false;
+		}
 	}
 
 	createNew(name: string) {

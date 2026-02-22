@@ -24,6 +24,7 @@ class MoneyMoneyStore {
 	loading = $state(false);
 	error = $state<string | null>(null);
 	connected = $state(false);
+	lastRefresh = $state<Date | null>(null);
 
 	// Cache: month key → transactions
 	private txCache = new Map<string, Transaction[]>();
@@ -75,6 +76,7 @@ class MoneyMoneyStore {
 			});
 			this.txCache.set(cacheKey, txs);
 			this.transactions = txs;
+			this.lastRefresh = new Date();
 		} catch (e) {
 			this.error = formatError('Transaktionen laden', e);
 			console.error(this.error);
