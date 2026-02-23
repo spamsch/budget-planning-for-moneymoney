@@ -4,7 +4,7 @@
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui } from '$lib/stores/ui.svelte';
 	import { formatEur, computeScenarioImpactSummary } from '$lib/utils/budgetCalc';
-	import { FlaskConical, Copy, Trash2, Play, Pencil, ArrowRight } from 'lucide-svelte';
+	import { FlaskConical, Copy, Trash2, Play, Pencil, ArrowRight, StickyNote } from 'lucide-svelte';
 
 	let {
 		categoryNodes = [],
@@ -21,6 +21,9 @@
 	let editValue = $state('');
 	let editingDescId = $state<string | null>(null);
 	let descValue = $state('');
+	let editingNotesId = $state<string | null>(null);
+	let notesValue = $state('');
+	let confirmDeleteId = $state<string | null>(null);
 
 	// Build a uuid → name lookup from MM categories
 	let categoryNameMap = $derived.by(() => {
@@ -65,13 +68,27 @@
 		budget.updateScenarioDescription(id, descValue);
 	}
 
+	function startEditNotes(id: string, notes: string | undefined) {
+		editingNotesId = id;
+		notesValue = notes ?? '';
+	}
+
+	function commitNotes(id: string) {
+		editingNotesId = null;
+		budget.updateScenarioNotes(id, notesValue);
+	}
+
 	function handleDuplicate(id: string, name: string) {
 		budget.duplicateScenario(id, `${name} (Kopie)`);
 	}
 
 	function handleDelete(id: string) {
 		const count = budget.getScenarioOverrideCount(id);
-		if (count > 0 && !confirm(`Szenario mit ${count} Änderung(en) wirklich löschen?`)) return;
+		if (count > 0 && confirmDeleteId !== id) {
+			confirmDeleteId = id;
+			return;
+		}
+		confirmDeleteId = null;
 		if (ui.activeScenarioId === id) {
 			ui.deactivateScenario();
 		}
@@ -181,6 +198,24 @@
 					</div>
 				</div>
 
+				{#if confirmDeleteId === scenario.id}
+					<div class="mt-1.5 flex items-center gap-2 text-xs">
+						<span class="text-text-muted">Löschen?</span>
+						<button
+							onclick={() => handleDelete(scenario.id)}
+							class="px-2 py-0.5 rounded bg-negative/20 text-negative hover:bg-negative/30 transition-colors"
+						>
+							Ja
+						</button>
+						<button
+							onclick={() => (confirmDeleteId = null)}
+							class="px-2 py-0.5 rounded bg-bg-tertiary text-text-muted hover:text-text transition-colors"
+						>
+							Nein
+						</button>
+					</div>
+				{/if}
+
 				{#if editingDescId === scenario.id}
 					<textarea
 						class="w-full mt-1.5 bg-bg-input border border-border rounded px-2 py-1 text-xs text-text focus:outline-none focus:border-accent resize-y min-h-[2rem]"
@@ -204,6 +239,36 @@
 						class="mt-1 text-[10px] text-text-dim/50 hover:text-text-dim transition-colors"
 					>
 						+ Beschreibung
+					</button>
+				{/if}
+
+				<!-- Notes -->
+				{#if editingNotesId === scenario.id}
+					<textarea
+						class="w-full mt-1.5 bg-bg-input border border-border rounded px-2 py-1.5 text-xs text-text focus:outline-none focus:border-accent resize-y min-h-[3rem]"
+						rows="3"
+						placeholder="Notizen zum Szenario..."
+						bind:value={notesValue}
+						onblur={() => commitNotes(scenario.id)}
+						onkeydown={(e) => { if (e.key === 'Escape') { editingNotesId = null; } }}
+						autofocus
+					></textarea>
+				{:else if scenario.notes}
+					<button
+						onclick={() => startEditNotes(scenario.id, scenario.notes)}
+						class="mt-1.5 w-full text-left text-xs text-text-dim hover:text-text transition-colors bg-bg-tertiary/50 rounded px-2 py-1.5 whitespace-pre-wrap leading-relaxed"
+					>
+						<span class="inline-flex items-center gap-1 text-[10px] text-text-dim/70 mb-0.5">
+							<StickyNote size={10} /> Notizen
+						</span>
+						<br />{scenario.notes}
+					</button>
+				{:else}
+					<button
+						onclick={() => startEditNotes(scenario.id, undefined)}
+						class="mt-1 text-[10px] text-text-dim/50 hover:text-text-dim transition-colors inline-flex items-center gap-1"
+					>
+						<StickyNote size={10} /> + Notiz
 					</button>
 				{/if}
 

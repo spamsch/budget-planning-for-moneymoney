@@ -54,6 +54,8 @@ pub struct Scenario {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
     pub created_at: String,
     pub overrides: HashMap<String, ScenarioOverride>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

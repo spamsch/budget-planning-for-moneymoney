@@ -105,6 +105,7 @@ export type Scenario = {
 	id: string;
 	name: string;
 	description?: string;
+	notes?: string;
 	createdAt: string;
 	overrides: Record<string, ScenarioOverride>;
 	virtualItems: VirtualItem[];

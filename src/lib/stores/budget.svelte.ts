@@ -336,6 +336,7 @@ class BudgetStore {
 			virtualItems: source.virtualItems.map((v) => ({ ...v, id: crypto.randomUUID() }))
 		};
 		if (source.description) clone.description = source.description;
+		if (source.notes) clone.notes = source.notes;
 		this.current.scenarios = [...this.current.scenarios, clone];
 		this._markDirty();
 		return newId;
@@ -358,6 +359,14 @@ class BudgetStore {
 		if (!scenario) return;
 		const trimmed = text.trim();
 		scenario.description = trimmed || undefined;
+		this._markDirty();
+	}
+
+	updateScenarioNotes(id: string, text: string) {
+		const scenario = this._findScenario(id);
+		if (!scenario) return;
+		const trimmed = text.trim();
+		scenario.notes = trimmed || undefined;
 		this._markDirty();
 	}
 
