@@ -21,6 +21,7 @@
 	import ScenarioPanel from '$lib/components/ScenarioPanel.svelte';
 	import ScenarioBar from '$lib/components/ScenarioBar.svelte';
 	import ScenarioAddDialog from '$lib/components/ScenarioAddDialog.svelte';
+	import AnalysisView from '$lib/components/analysis/AnalysisView.svelte';
 
 	let initialized = $state(false);
 	let showSettings = $state(false);
@@ -222,16 +223,25 @@
 		{/if}
 
 		<div class="flex flex-1 overflow-hidden">
-			<!-- Main budget table -->
+			<!-- Main content: table or analysis -->
 			<div class="flex-1 overflow-hidden flex flex-col">
-				<BudgetView
-					{incomeRows}
-					{expenseRows}
-					accounts={mm.accounts}
-					virtualItems={activeScenario?.virtualItems ?? []}
-					scenarioId={ui.activeScenarioId}
-					baselineTemplate={ui.activeScenarioId ? budget.current.template : null}
-				/>
+				{#if ui.viewMode === 'analysis'}
+					<AnalysisView
+						{incomeRows}
+						{expenseRows}
+						{summary}
+						unplannedForMonth={budget.getUnplannedForMonth(ui.selectedMonth)}
+					/>
+				{:else}
+					<BudgetView
+						{incomeRows}
+						{expenseRows}
+						accounts={mm.accounts}
+						virtualItems={activeScenario?.virtualItems ?? []}
+						scenarioId={ui.activeScenarioId}
+						baselineTemplate={ui.activeScenarioId ? budget.current.template : null}
+					/>
+				{/if}
 				{#if ui.selectedCategoryUuid}
 					<TransactionDrawer {incomeRows} {expenseRows} {txMap} />
 				{/if}

@@ -10,6 +10,7 @@ class UiStore {
 	selectedCategoryUuid = $state<string | null>(null);
 	activeScenarioId = $state<string | null>(null);
 	showScenarioPanel = $state(false);
+	viewMode = $state<'table' | 'analysis'>('table');
 
 	setMonth(month: string) {
 		this.selectedMonth = month;
@@ -69,6 +70,10 @@ class UiStore {
 
 	toggleScenarioPanel() {
 		this.showScenarioPanel = !this.showScenarioPanel;
+	}
+
+	toggleViewMode() {
+		this.viewMode = this.viewMode === 'table' ? 'analysis' : 'table';
 	}
 
 	activateScenario(id: string) {
