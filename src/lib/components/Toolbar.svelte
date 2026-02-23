@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle, FlaskConical } from 'lucide-svelte';
+	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle, FlaskConical, BarChart3 } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
@@ -67,6 +67,19 @@
 	</div>
 
 	<div class="flex items-center gap-2">
+		<button
+			onclick={() => ui.toggleViewMode()}
+			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {ui.viewMode === 'analysis'
+				? 'bg-accent/20 text-accent'
+				: 'text-text-muted hover:text-text hover:bg-bg-tertiary'}"
+			title="Grafische Analyse"
+		>
+			<BarChart3 size={14} />
+			Analyse
+		</button>
+
+		<div class="w-px h-5 bg-border"></div>
+
 		<button
 			onclick={() => ui.toggleAccountRouting()}
 			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {ui.showAccountRouting

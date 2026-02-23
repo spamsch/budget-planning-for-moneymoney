@@ -15,15 +15,16 @@
     "@sveltejs/kit": "^2",
     "@sveltejs/vite-plugin-svelte": "^5",
     "@tailwindcss/vite": "^4",
+    "@tauri-apps/cli": "^2",
     "svelte": "^5",
     "svelte-check": "^4",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vite": "^6",
-    "@tauri-apps/cli": "^2"
+    "vite": "^6"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
+    "echarts": "^6.0.0",
     "lucide-svelte": "^0.469"
   }
 }
