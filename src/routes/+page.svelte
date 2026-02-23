@@ -22,12 +22,33 @@
 	import ScenarioBar from '$lib/components/ScenarioBar.svelte';
 	import ScenarioAddDialog from '$lib/components/ScenarioAddDialog.svelte';
 	import AnalysisView from '$lib/components/analysis/AnalysisView.svelte';
+	import ChatPanel from '$lib/components/ChatPanel.svelte';
 
 	let initialized = $state(false);
 	let showSettings = $state(false);
 	let showNotes = $state(false);
 	let showScenarios = $state(false);
+	let showChat = $state(false);
+	let chatWidth = $state(420);
 	let showAddDialog = $state(false);
+
+	function startChatResize(e: MouseEvent) {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = chatWidth;
+
+		function onMouseMove(e: MouseEvent) {
+			chatWidth = Math.max(280, startWidth + (startX - e.clientX));
+		}
+
+		function onMouseUp() {
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+		}
+
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+	}
 
 	// Derived: split tree into income/expense
 	let treeGroups = $derived.by(() => {
@@ -183,7 +204,7 @@
 </script>
 
 <div class="flex flex-col h-full bg-bg">
-	<Toolbar bind:showSettings bind:showNotes bind:showScenarios />
+	<Toolbar bind:showSettings bind:showNotes bind:showScenarios bind:showChat />
 
 	{#if mm.error}
 		<div class="flex items-center gap-3 px-4 py-3 bg-warning/10 border-b border-warning/30">
@@ -272,6 +293,28 @@
 							<EntityManager />
 						</div>
 					{/if}
+				</div>
+			{/if}
+
+			<!-- Chat Panel -->
+			{#if showChat}
+				<div
+					class="border-l border-border bg-bg-secondary flex flex-col relative"
+					style="width: {chatWidth}px; min-width: 280px; max-width: 50vw;"
+				>
+					<!-- Resize handle -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent/30 active:bg-accent/50 transition-colors z-10"
+						onmousedown={startChatResize}
+					></div>
+					<ChatPanel
+						{incomeRows}
+						{expenseRows}
+						{summary}
+						month={ui.selectedMonth}
+						scenarioName={activeScenario?.name}
+					/>
 				</div>
 			{/if}
 		</div>

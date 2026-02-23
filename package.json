@@ -25,6 +25,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2",
     "echarts": "^6.0.0",
-    "lucide-svelte": "^0.469"
+    "lucide-svelte": "^0.469",
+    "marked": "^17.0.3"
   }
 }

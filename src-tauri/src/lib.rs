@@ -1,3 +1,4 @@
+mod llm;
 mod moneymoney;
 mod persistence;
 
@@ -55,6 +56,25 @@ async fn delete_budget(name: String) -> Result<(), String> {
     persistence::delete_budget(&name)
 }
 
+#[tauri::command]
+async fn load_app_config() -> Result<llm::AppConfig, String> {
+    llm::load_config()
+}
+
+#[tauri::command]
+async fn save_app_config(config: llm::AppConfig) -> Result<(), String> {
+    llm::save_config(&config)
+}
+
+#[tauri::command]
+async fn chat_completion(
+    api_key: String,
+    model: String,
+    messages: Vec<llm::ChatMessage>,
+) -> Result<String, String> {
+    llm::chat_completion(&api_key, &model, messages).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -66,6 +86,9 @@ pub fn run() {
             save_budget,
             list_budgets,
             delete_budget,
+            load_app_config,
+            save_app_config,
+            chat_completion,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
