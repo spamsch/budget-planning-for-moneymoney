@@ -2,8 +2,6 @@
 
 A macOS desktop budgeting app that connects to MoneyMoney and turns your categories and transactions into a clear monthly plan vs. actual view.
 
-![Budget Planner screenshot](assets/screenshot.jpeg)
-
 ## Who It's For
 - You use MoneyMoney on macOS.
 - You want a simple, month-by-month budget with planned vs. actual spending.
