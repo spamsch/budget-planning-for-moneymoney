@@ -5,7 +5,16 @@
 	import { ui } from '$lib/stores/ui.svelte';
 	import { formatEur } from '$lib/utils/budgetCalc';
 
-	let { row }: { row: CategoryBudgetRow } = $props();
+	let {
+		row,
+		scenarioBaselinePlanned
+	}: {
+		row: CategoryBudgetRow;
+		scenarioBaselinePlanned?: number | null;
+	} = $props();
+
+	let hasDelta = $derived(scenarioBaselinePlanned != null && Math.abs(row.planned - scenarioBaselinePlanned) > 0.005);
+	let delta = $derived(scenarioBaselinePlanned != null ? row.planned - scenarioBaselinePlanned : 0);
 
 	let collapsed = $derived(ui.isCollapsed(row.uuid));
 	let isExcluded = $derived(!!row.excluded);
@@ -53,6 +62,11 @@
 		<span class="block text-right px-2 py-1 text-sm font-mono text-text-muted font-medium">
 			{#if isExcluded}—{:else}{formatEur(row.planned)}{/if}
 		</span>
+		{#if hasDelta}
+			<span class="block text-right px-2 text-[10px] font-mono {delta > 0 ? 'text-negative' : 'text-positive'}">
+				{delta > 0 ? '+' : ''}{formatEur(delta)}
+			</span>
+		{/if}
 	</td>
 
 	<td class="py-1.5 px-3 text-right text-sm font-mono text-text-muted font-medium">

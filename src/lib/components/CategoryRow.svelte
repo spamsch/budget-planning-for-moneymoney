@@ -10,10 +10,12 @@
 
 	let {
 		row,
-		accounts = []
+		accounts = [],
+		scenarioBaseline
 	}: {
 		row: CategoryBudgetRow;
 		accounts?: Account[];
+		scenarioBaseline?: number | null;
 	} = $props();
 
 	let editingAmount = $state(false);
@@ -49,11 +51,17 @@
 		editingAmount = true;
 	}
 
+	let isOverridden = $derived(scenarioBaseline != null);
+
 	function commitEdit() {
 		editingAmount = false;
 		const val = parseFloat(inputValue) || 0;
 		if (val !== row.planned) {
-			budget.setTemplateAmount(row.uuid, val);
+			if (ui.activeScenarioId) {
+				budget.setScenarioOverride(ui.activeScenarioId, row.uuid, val);
+			} else {
+				budget.setTemplateAmount(row.uuid, val);
+			}
 		}
 	}
 
@@ -120,7 +128,7 @@
 	let customEntities = $derived(budget.current.settings.customEntities ?? []);
 </script>
 
-<tr class="hover:bg-bg-row-hover transition-colors group {isExcluded ? 'opacity-50' : ''} {isSelected ? 'border-l-2 border-l-accent bg-accent/5' : ''}">
+<tr class="hover:bg-bg-row-hover transition-colors group {isExcluded ? 'opacity-50' : ''} {isSelected ? 'border-l-2 border-l-accent bg-accent/5' : ''} {isOverridden ? 'border-l-3 border-l-accent bg-accent/5' : ''}">
 	<td class="py-1.5 pr-2 text-sm" style="padding-left: {indent}">
 		<span class="inline-flex items-center gap-1">
 			{#if hasLineItems}
@@ -188,6 +196,9 @@
 			<span class="block text-right px-2 py-1 text-sm font-mono text-text-muted">
 				{formatEur(row.planned)}
 			</span>
+			{#if isOverridden}
+				<span class="block text-right px-2 text-[10px] font-mono text-text-dim">Basis: {formatEur(scenarioBaseline!)}</span>
+			{/if}
 		{:else if editingAmount}
 			<input
 				type="number"
@@ -202,12 +213,14 @@
 			<button
 				onclick={startEdit}
 				class="w-full text-right cursor-text rounded px-2 py-1 text-sm font-mono
-					bg-bg-input/60 border border-border/50
-					hover:bg-bg-input hover:border-border
+					{isOverridden ? 'bg-accent/10 border border-accent/30 hover:border-accent' : 'bg-bg-input/60 border border-border/50 hover:bg-bg-input hover:border-border'}
 					{row.planned === 0 ? 'text-text-dim' : 'text-text'}"
 			>
 				{formatEur(row.planned)}
 			</button>
+			{#if isOverridden}
+				<span class="block text-right px-2 text-[10px] font-mono text-text-dim">Basis: {formatEur(scenarioBaseline!)}</span>
+			{/if}
 		{/if}
 	</td>
 

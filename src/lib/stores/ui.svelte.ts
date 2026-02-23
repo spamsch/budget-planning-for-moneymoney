@@ -8,6 +8,8 @@ class UiStore {
 	showAccountRouting = $state(false);
 	showNotes = $state(false);
 	selectedCategoryUuid = $state<string | null>(null);
+	activeScenarioId = $state<string | null>(null);
+	showScenarioPanel = $state(false);
 
 	setMonth(month: string) {
 		this.selectedMonth = month;
@@ -63,6 +65,18 @@ class UiStore {
 
 	toggleAccountRouting() {
 		this.showAccountRouting = !this.showAccountRouting;
+	}
+
+	toggleScenarioPanel() {
+		this.showScenarioPanel = !this.showScenarioPanel;
+	}
+
+	activateScenario(id: string) {
+		this.activeScenarioId = id;
+	}
+
+	deactivateScenario() {
+		this.activeScenarioId = null;
 	}
 
 	selectCategory(uuid: string) {
