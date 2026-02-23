@@ -3,7 +3,9 @@ import type {
 	CategoryBudgetRow,
 	MonthSummary,
 	TemplateEntry,
-	Transaction
+	Transaction,
+	VirtualItem,
+	ScenarioImpactSummary
 } from '$lib/types';
 import { getLeafCategoryUuids } from './categoryTree';
 
@@ -208,4 +210,77 @@ export function formatEur(amount: number): string {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2
 	}).format(amount);
+}
+
+/**
+ * Compute scenario impact summary by comparing baseline vs scenario templates.
+ * Walks category trees, sums leaf planned amounts, adds virtual items.
+ */
+export function computeScenarioImpactSummary(
+	baselineTemplate: Record<string, TemplateEntry>,
+	scenarioTemplate: Record<string, TemplateEntry>,
+	virtualItems: VirtualItem[],
+	nodes: CategoryNode[],
+	incomeUuids: Set<string>,
+	excludedUuids: Set<string>
+): ScenarioImpactSummary {
+	let baselineIncome = 0;
+	let baselineExpenses = 0;
+	let scenarioIncome = 0;
+	let scenarioExpenses = 0;
+	let overriddenCount = 0;
+
+	function walkLeaves(nodeList: CategoryNode[], isIncome: boolean) {
+		for (const node of nodeList) {
+			if (excludedUuids.has(node.uuid)) continue;
+			if (node.group && node.children.length > 0) {
+				walkLeaves(node.children, isIncome);
+			} else {
+				const baseAmt = baselineTemplate[node.uuid]?.amount ?? 0;
+				const scenAmt = scenarioTemplate[node.uuid]?.amount ?? 0;
+				if (isIncome) {
+					baselineIncome += baseAmt;
+					scenarioIncome += scenAmt;
+				} else {
+					baselineExpenses += baseAmt;
+					scenarioExpenses += scenAmt;
+				}
+				if (Math.abs(baseAmt - scenAmt) > 0.005) {
+					overriddenCount++;
+				}
+			}
+		}
+	}
+
+	for (const node of nodes) {
+		const isIncome = incomeUuids.has(node.uuid);
+		if (node.group && node.children.length > 0) {
+			walkLeaves(node.children, isIncome);
+		} else {
+			walkLeaves([node], isIncome);
+		}
+	}
+
+	let virtualItemsTotal = 0;
+	for (const vi of virtualItems) {
+		if (vi.isIncome) {
+			scenarioIncome += vi.amount;
+		} else {
+			scenarioExpenses += vi.amount;
+		}
+		virtualItemsTotal += vi.amount;
+	}
+
+	const baselineNet = baselineIncome - baselineExpenses;
+	const scenarioNet = scenarioIncome - scenarioExpenses;
+
+	return {
+		baselineExpenses,
+		scenarioExpenses,
+		baselineIncome,
+		scenarioIncome,
+		netDelta: scenarioNet - baselineNet,
+		overriddenCount,
+		virtualItemsTotal
+	};
 }

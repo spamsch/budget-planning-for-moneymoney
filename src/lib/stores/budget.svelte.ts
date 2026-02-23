@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction } from '$lib/types';
+import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction, Scenario, ScenarioOverride, VirtualItem } from '$lib/types';
 
 function createEmptyBudget(name: string): BudgetTemplate {
 	return {
@@ -15,7 +15,8 @@ function createEmptyBudget(name: string): BudgetTemplate {
 		},
 		template: {},
 		comments: {},
-		unplanned: {}
+		unplanned: {},
+		scenarios: []
 	};
 }
 
@@ -73,6 +74,9 @@ class BudgetStore {
 			}
 			if (!loaded.unplanned) {
 				loaded.unplanned = {};
+			}
+			if (!loaded.scenarios) {
+				loaded.scenarios = [];
 			}
 			this.current = loaded;
 			this.dirty = false;
@@ -298,6 +302,159 @@ class BudgetStore {
 		const monthMap = this.current.unplanned[month];
 		if (!monthMap) return [];
 		return Object.entries(monthMap).map(([categoryUuid, transactions]) => ({ categoryUuid, transactions }));
+	}
+
+	// --- Scenario methods ---
+
+	private _findScenario(id: string): Scenario | undefined {
+		return this.current.scenarios.find((s) => s.id === id);
+	}
+
+	createScenario(name: string): string {
+		const id = crypto.randomUUID();
+		const scenario: Scenario = {
+			id,
+			name,
+			createdAt: new Date().toISOString(),
+			overrides: {},
+			virtualItems: []
+		};
+		this.current.scenarios = [...this.current.scenarios, scenario];
+		this._markDirty();
+		return id;
+	}
+
+	duplicateScenario(id: string, newName: string): string | null {
+		const source = this._findScenario(id);
+		if (!source) return null;
+		const newId = crypto.randomUUID();
+		const clone: Scenario = {
+			id: newId,
+			name: newName,
+			createdAt: new Date().toISOString(),
+			overrides: JSON.parse(JSON.stringify(source.overrides)),
+			virtualItems: source.virtualItems.map((v) => ({ ...v, id: crypto.randomUUID() }))
+		};
+		if (source.description) clone.description = source.description;
+		if (source.notes) clone.notes = source.notes;
+		this.current.scenarios = [...this.current.scenarios, clone];
+		this._markDirty();
+		return newId;
+	}
+
+	deleteScenario(id: string) {
+		this.current.scenarios = this.current.scenarios.filter((s) => s.id !== id);
+		this._markDirty();
+	}
+
+	renameScenario(id: string, name: string) {
+		const scenario = this._findScenario(id);
+		if (!scenario) return;
+		scenario.name = name.trim();
+		this._markDirty();
+	}
+
+	updateScenarioDescription(id: string, text: string) {
+		const scenario = this._findScenario(id);
+		if (!scenario) return;
+		const trimmed = text.trim();
+		scenario.description = trimmed || undefined;
+		this._markDirty();
+	}
+
+	updateScenarioNotes(id: string, text: string) {
+		const scenario = this._findScenario(id);
+		if (!scenario) return;
+		const trimmed = text.trim();
+		scenario.notes = trimmed || undefined;
+		this._markDirty();
+	}
+
+	setScenarioOverride(scenarioId: string, categoryUuid: string, amount: number) {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return;
+		const baseline = this.current.template[categoryUuid]?.amount ?? 0;
+		if (Math.abs(amount - baseline) < 0.005) {
+			delete scenario.overrides[categoryUuid];
+		} else {
+			scenario.overrides[categoryUuid] = { amount };
+		}
+		this._markDirty();
+	}
+
+	removeScenarioOverride(scenarioId: string, categoryUuid: string) {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return;
+		delete scenario.overrides[categoryUuid];
+		this._markDirty();
+	}
+
+	addVirtualItem(scenarioId: string, name: string, amount: number, isIncome: boolean): string | null {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return null;
+		const id = crypto.randomUUID();
+		scenario.virtualItems = [...scenario.virtualItems, { id, name, amount, isIncome }];
+		this._markDirty();
+		return id;
+	}
+
+	updateVirtualItem(scenarioId: string, itemId: string, updates: Partial<Pick<VirtualItem, 'name' | 'amount' | 'isIncome'>>) {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return;
+		const item = scenario.virtualItems.find((v) => v.id === itemId);
+		if (!item) return;
+		if (updates.name !== undefined) item.name = updates.name;
+		if (updates.amount !== undefined) item.amount = updates.amount;
+		if (updates.isIncome !== undefined) item.isIncome = updates.isIncome;
+		this._markDirty();
+	}
+
+	removeVirtualItem(scenarioId: string, itemId: string) {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return;
+		scenario.virtualItems = scenario.virtualItems.filter((v) => v.id !== itemId);
+		this._markDirty();
+	}
+
+	applyScenarioToBaseline(scenarioId: string) {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return;
+		for (const [uuid, override] of Object.entries(scenario.overrides)) {
+			const existing = this.current.template[uuid];
+			if (existing) {
+				existing.amount = override.amount;
+				if (override.lineItems?.length) {
+					existing.lineItems = override.lineItems;
+				}
+			} else {
+				this.current.template[uuid] = { amount: override.amount };
+			}
+		}
+		this.current.scenarios = this.current.scenarios.filter((s) => s.id !== scenarioId);
+		this._markDirty();
+	}
+
+	getResolvedTemplate(scenarioId: string): Record<string, TemplateEntry> {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return this.current.template;
+		const resolved: Record<string, TemplateEntry> = {};
+		for (const [uuid, entry] of Object.entries(this.current.template)) {
+			resolved[uuid] = { ...entry };
+		}
+		for (const [uuid, override] of Object.entries(scenario.overrides)) {
+			if (resolved[uuid]) {
+				resolved[uuid] = { ...resolved[uuid], amount: override.amount };
+			} else {
+				resolved[uuid] = { amount: override.amount };
+			}
+		}
+		return resolved;
+	}
+
+	getScenarioOverrideCount(scenarioId: string): number {
+		const scenario = this._findScenario(scenarioId);
+		if (!scenario) return 0;
+		return Object.keys(scenario.overrides).length + scenario.virtualItems.length;
 	}
 
 	updateSettings(partial: Partial<BudgetSettings>) {

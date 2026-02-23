@@ -85,6 +85,40 @@ export type BudgetTemplate = {
 	template: Record<string, TemplateEntry>;
 	comments: Record<string, Record<string, string>>;
 	unplanned: Record<string, Record<string, UnplannedTransaction[]>>;
+	scenarios: Scenario[];
+};
+
+// Scenario types
+export type ScenarioOverride = {
+	amount: number;
+	lineItems?: LineItem[];
+};
+
+export type VirtualItem = {
+	id: string;
+	name: string;
+	amount: number;
+	isIncome: boolean;
+};
+
+export type Scenario = {
+	id: string;
+	name: string;
+	description?: string;
+	notes?: string;
+	createdAt: string;
+	overrides: Record<string, ScenarioOverride>;
+	virtualItems: VirtualItem[];
+};
+
+export type ScenarioImpactSummary = {
+	baselineExpenses: number;
+	scenarioExpenses: number;
+	baselineIncome: number;
+	scenarioIncome: number;
+	netDelta: number;
+	overriddenCount: number;
+	virtualItemsTotal: number;
 };
 
 // Computed types for the UI

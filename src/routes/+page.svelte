@@ -6,7 +6,8 @@
 	import {
 		groupTransactionsByCategory,
 		computeCategoryRows,
-		computeMonthSummary
+		computeMonthSummary,
+		computeScenarioImpactSummary
 	} from '$lib/utils/budgetCalc';
 	import { splitIncomeExpense, collectAllUuids } from '$lib/utils/categoryTree';
 	import { AlertTriangle } from 'lucide-svelte';
@@ -17,10 +18,15 @@
 	import EntityManager from '$lib/components/EntityManager.svelte';
 	import NotesPanel from '$lib/components/NotesPanel.svelte';
 	import TransactionDrawer from '$lib/components/TransactionDrawer.svelte';
+	import ScenarioPanel from '$lib/components/ScenarioPanel.svelte';
+	import ScenarioBar from '$lib/components/ScenarioBar.svelte';
+	import ScenarioAddDialog from '$lib/components/ScenarioAddDialog.svelte';
 
 	let initialized = $state(false);
 	let showSettings = $state(false);
 	let showNotes = $state(false);
+	let showScenarios = $state(false);
+	let showAddDialog = $state(false);
 
 	// Derived: split tree into income/expense
 	let treeGroups = $derived.by(() => {
@@ -40,11 +46,25 @@
 	// Derived: excluded category UUIDs
 	let excludedSet = $derived(new Set(budget.current.settings.excludedCategories));
 
+	// Derived: active scenario
+	let activeScenario = $derived.by(() => {
+		if (!ui.activeScenarioId) return null;
+		return budget.current.scenarios.find((s) => s.id === ui.activeScenarioId) ?? null;
+	});
+
+	// Derived: resolved template (with scenario overrides applied)
+	let resolvedTemplate = $derived.by(() => {
+		if (ui.activeScenarioId) {
+			return budget.getResolvedTemplate(ui.activeScenarioId);
+		}
+		return budget.current.template;
+	});
+
 	// Derived: budget rows
 	let incomeRows = $derived(
 		computeCategoryRows(
 			treeGroups.income,
-			budget.current.template,
+			resolvedTemplate,
 			txMap,
 			incomeUuidSet,
 			true,
@@ -55,7 +75,7 @@
 	let expenseRows = $derived(
 		computeCategoryRows(
 			treeGroups.expenses,
-			budget.current.template,
+			resolvedTemplate,
 			txMap,
 			incomeUuidSet,
 			false,
@@ -65,6 +85,39 @@
 
 	// Derived: month summary
 	let summary = $derived(computeMonthSummary(incomeRows, expenseRows));
+
+	// Derived: scenario impact
+	let scenarioImpact = $derived.by(() => {
+		if (!activeScenario) return null;
+		return computeScenarioImpactSummary(
+			budget.current.template,
+			resolvedTemplate,
+			activeScenario.virtualItems,
+			[...treeGroups.income, ...treeGroups.expenses],
+			incomeUuidSet,
+			excludedSet
+		);
+	});
+
+	// Derived: leaf categories for add dialog
+	let leafCategories = $derived.by(() => {
+		const result: { uuid: string; name: string; path: string }[] = [];
+		function walk(nodes: import('$lib/types').CategoryNode[], pathParts: string[]) {
+			for (const node of nodes) {
+				if (node.group && node.children.length > 0) {
+					walk(node.children, [...pathParts, node.name]);
+				} else {
+					result.push({
+						uuid: node.uuid,
+						name: node.name,
+						path: pathParts.join(' > ')
+					});
+				}
+			}
+		}
+		walk(mm.categoryTree, []);
+		return result;
+	});
 
 	// Effect: reload transactions when month changes
 	$effect(() => {
@@ -76,11 +129,15 @@
 		mm.fetchTransactions(from, to, accounts);
 	});
 
-	// Cmd+S keyboard shortcut
+	// Keyboard shortcuts
 	function handleKeydown(e: KeyboardEvent) {
 		if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 			e.preventDefault();
 			budget.saveBudget();
+		}
+		// Escape to deactivate scenario
+		if (e.key === 'Escape' && ui.activeScenarioId && !showAddDialog) {
+			ui.deactivateScenario();
 		}
 	}
 
@@ -125,7 +182,7 @@
 </script>
 
 <div class="flex flex-col h-full bg-bg">
-	<Toolbar bind:showSettings bind:showNotes />
+	<Toolbar bind:showSettings bind:showNotes bind:showScenarios />
 
 	{#if mm.error}
 		<div class="flex items-center gap-3 px-4 py-3 bg-warning/10 border-b border-warning/30">
@@ -160,18 +217,38 @@
 	{:else}
 		<OverviewBar {summary} />
 
+		{#if activeScenario && scenarioImpact}
+			<ScenarioBar scenario={activeScenario} impact={scenarioImpact} onAddItem={() => (showAddDialog = true)} />
+		{/if}
+
 		<div class="flex flex-1 overflow-hidden">
 			<!-- Main budget table -->
 			<div class="flex-1 overflow-hidden flex flex-col">
-				<BudgetView {incomeRows} {expenseRows} accounts={mm.accounts} />
+				<BudgetView
+					{incomeRows}
+					{expenseRows}
+					accounts={mm.accounts}
+					virtualItems={activeScenario?.virtualItems ?? []}
+					scenarioId={ui.activeScenarioId}
+					baselineTemplate={ui.activeScenarioId ? budget.current.template : null}
+				/>
 				{#if ui.selectedCategoryUuid}
 					<TransactionDrawer {incomeRows} {expenseRows} {txMap} />
 				{/if}
 			</div>
 
 			<!-- Sidebar -->
-			{#if showSettings || showNotes}
+			{#if showSettings || showNotes || showScenarios}
 				<div class="w-80 border-l border-border overflow-auto bg-bg-secondary flex flex-col">
+					{#if showScenarios}
+						<div class="p-4 {showSettings || showNotes ? 'border-b border-border' : ''}">
+							<ScenarioPanel
+								categoryNodes={[...treeGroups.income, ...treeGroups.expenses]}
+								incomeUuids={incomeUuidSet}
+								excludedUuids={excludedSet}
+							/>
+						</div>
+					{/if}
 					{#if showNotes}
 						<div class="p-4 {showSettings ? 'border-b border-border' : ''}">
 							<NotesPanel {incomeRows} {expenseRows} />
@@ -188,5 +265,9 @@
 				</div>
 			{/if}
 		</div>
+
+		{#if showAddDialog && ui.activeScenarioId}
+			<ScenarioAddDialog {leafCategories} onclose={() => (showAddDialog = false)} />
+		{/if}
 	{/if}
 </div>

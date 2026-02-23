@@ -25,6 +25,41 @@ pub struct BudgetTemplate {
     pub comments: HashMap<String, HashMap<String, String>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub unplanned: HashMap<String, HashMap<String, Vec<UnplannedTransaction>>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scenarios: Vec<Scenario>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ScenarioOverride {
+    pub amount: f64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub line_items: Vec<LineItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VirtualItem {
+    pub id: String,
+    pub name: String,
+    pub amount: f64,
+    #[serde(default)]
+    pub is_income: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Scenario {
+    pub id: String,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub overrides: HashMap<String, ScenarioOverride>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub virtual_items: Vec<VirtualItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

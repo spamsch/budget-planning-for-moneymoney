@@ -1,15 +1,17 @@
 <script lang="ts">
-	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle } from 'lucide-svelte';
+	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle, FlaskConical } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
 
 	let {
 		showSettings = $bindable(false),
-		showNotes = $bindable(false)
+		showNotes = $bindable(false),
+		showScenarios = $bindable(false)
 	}: {
 		showSettings?: boolean;
 		showNotes?: boolean;
+		showScenarios?: boolean;
 	} = $props();
 
 	let editing = $state(false);
@@ -85,6 +87,17 @@
 		>
 			<StickyNote size={14} />
 			Notizen
+		</button>
+
+		<button
+			onclick={() => (showScenarios = !showScenarios)}
+			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {showScenarios
+				? 'bg-accent/20 text-accent'
+				: 'text-text-muted hover:text-text hover:bg-bg-tertiary'}"
+			title="Szenarien"
+		>
+			<FlaskConical size={14} />
+			Szenarien
 		</button>
 
 		<button
