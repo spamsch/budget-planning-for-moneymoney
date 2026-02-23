@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle, FlaskConical, BarChart3 } from 'lucide-svelte';
+	import { RefreshCw, Route, Settings, StickyNote, LoaderCircle, FlaskConical, BarChart3, MessageCircle } from 'lucide-svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
@@ -7,11 +7,13 @@
 	let {
 		showSettings = $bindable(false),
 		showNotes = $bindable(false),
-		showScenarios = $bindable(false)
+		showScenarios = $bindable(false),
+		showChat = $bindable(false)
 	}: {
 		showSettings?: boolean;
 		showNotes?: boolean;
 		showScenarios?: boolean;
+		showChat?: boolean;
 	} = $props();
 
 	let editing = $state(false);
@@ -111,6 +113,17 @@
 		>
 			<FlaskConical size={14} />
 			Szenarien
+		</button>
+
+		<button
+			onclick={() => (showChat = !showChat)}
+			class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors {showChat
+				? 'bg-accent/20 text-accent'
+				: 'text-text-muted hover:text-text hover:bg-bg-tertiary'}"
+			title="Chat mit KI"
+		>
+			<MessageCircle size={14} />
+			Chat
 		</button>
 
 		<button

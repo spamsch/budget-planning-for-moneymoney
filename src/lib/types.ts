@@ -147,3 +147,14 @@ export type MonthSummary = {
 	netPlanned: number;
 	netActual: number;
 };
+
+// LLM types
+export type AppConfig = {
+	openaiApiKey: string;
+	openaiModel: string;
+};
+
+export type ChatMessage = {
+	role: 'system' | 'user' | 'assistant';
+	content: string;
+};
