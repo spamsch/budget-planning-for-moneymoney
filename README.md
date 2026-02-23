@@ -34,12 +34,40 @@ A macOS desktop budgeting app that connects to MoneyMoney and turns your categor
 - **Database locked**: Unlock MoneyMoney's database and refresh.
 - **Access denied**: macOS System Settings -> Privacy & Security -> Automation -> allow Budget Planner to control MoneyMoney.
 
+## Demo Mode
+
+You can run the app without MoneyMoney using built-in dummy data. This is useful for demos, development on non-Mac machines, and onboarding.
+
+```bash
+npm run dev:demo
+```
+
+The demo simulates a German family household budget ("Familie Müller") with 5 accounts, ~35 categories, and 50-80 realistic transactions per month. Transactions are deterministic — the same month always produces the same data.
+
+### Budget table with planned vs. actual
+
+The main view shows all income and expense categories with planned amounts, actual spending from transactions, and the difference. Categories are organized in a hierarchy matching a typical German household.
+
+![Demo mode — budget table](assets/demo-budget-table.png)
+
+### Notes and unplanned expenses
+
+The notes panel shows per-category comments and highlights unplanned transactions — expenses that weren't part of the original budget (e.g. an unexpected car repair).
+
+![Demo mode — notes and unplanned transactions](assets/demo-notes-unplanned.png)
+
+### What-if scenarios
+
+The scenario panel lets you model budget changes before committing them. The demo includes a pre-built "Urlaub Kroatien" scenario with overrides for travel, fuel, and dining, plus virtual items like highway tolls and accommodation.
+
+![Demo mode — scenario panel](assets/demo-scenarios.png)
+
 ## Development
 
 Prereqs:
 - Node.js (LTS recommended)
 - Rust toolchain (for Tauri)
-- macOS (MoneyMoney integration)
+- macOS (MoneyMoney integration, not needed for demo mode)
 
 Install dependencies:
 ```bash
@@ -49,6 +77,11 @@ npm install
 Run the app in dev mode:
 ```bash
 npm run tauri dev
+```
+
+Run in demo mode (no MoneyMoney required):
+```bash
+npm run dev:demo
 ```
 
 Build the app:

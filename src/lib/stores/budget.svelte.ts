@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction, Scenario, ScenarioOverride, VirtualItem } from '$lib/types';
+import { isDemoMode, DEMO_BUDGET } from '$lib/demo';
 
 function createEmptyBudget(name: string): BudgetTemplate {
 	return {
@@ -50,6 +51,10 @@ class BudgetStore {
 	}
 
 	async listBudgets() {
+		if (isDemoMode) {
+			this.budgetNames = ['Demo Familie'];
+			return;
+		}
 		try {
 			this.budgetNames = await invoke<string[]>('list_budgets');
 		} catch (e) {
@@ -59,6 +64,11 @@ class BudgetStore {
 
 	async loadBudget(name: string) {
 		this._clearTimers();
+		if (isDemoMode) {
+			this.current = structuredClone(DEMO_BUDGET);
+			this.dirty = false;
+			return;
+		}
 		try {
 			this.error = null;
 			const loaded = await invoke<BudgetTemplate>('load_budget', { name });
@@ -92,6 +102,11 @@ class BudgetStore {
 			clearTimeout(this._debounceTimer);
 			this._debounceTimer = null;
 		}
+		if (isDemoMode) {
+			this.dirty = false;
+			this.lastSavedAt = new Date();
+			return;
+		}
 		try {
 			this.saveStatus = 'saving';
 			this.error = null;
@@ -107,6 +122,7 @@ class BudgetStore {
 	}
 
 	async deleteBudget(name: string) {
+		if (isDemoMode) return;
 		try {
 			await invoke('delete_budget', { name });
 			await this.listBudgets();
@@ -465,6 +481,10 @@ class BudgetStore {
 	async renameBudget(newName: string) {
 		const trimmed = newName.trim();
 		if (!trimmed || trimmed === this.current.name) return;
+		if (isDemoMode) {
+			this.current.name = trimmed;
+			return;
+		}
 		const oldName = this.current.name;
 		this.current.name = trimmed;
 		try {

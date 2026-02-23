@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { Category, CategoryNode, Account, Transaction } from '$lib/types';
 import { buildCategoryTree } from '$lib/utils/categoryTree';
+import { isDemoMode, DEMO_CATEGORIES, DEMO_ACCOUNTS, generateDemoTransactions } from '$lib/demo';
 
 function formatError(context: string, e: unknown): string {
 	const msg = String(e);
@@ -30,6 +31,12 @@ class MoneyMoneyStore {
 	private txCache = new Map<string, Transaction[]>();
 
 	async fetchCategories() {
+		if (isDemoMode) {
+			this.categories = DEMO_CATEGORIES;
+			this.categoryTree = buildCategoryTree(this.categories);
+			this.connected = true;
+			return;
+		}
 		try {
 			this.loading = true;
 			this.error = null;
@@ -45,6 +52,11 @@ class MoneyMoneyStore {
 	}
 
 	async fetchAccounts() {
+		if (isDemoMode) {
+			this.accounts = DEMO_ACCOUNTS;
+			this.connected = true;
+			return;
+		}
 		try {
 			this.loading = true;
 			this.error = null;
@@ -63,6 +75,14 @@ class MoneyMoneyStore {
 		const cached = this.txCache.get(cacheKey);
 		if (cached) {
 			this.transactions = cached;
+			return;
+		}
+
+		if (isDemoMode) {
+			const txs = generateDemoTransactions(from, to, accountUuids);
+			this.txCache.set(cacheKey, txs);
+			this.transactions = txs;
+			this.lastRefresh = new Date();
 			return;
 		}
 

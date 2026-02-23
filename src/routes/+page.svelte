@@ -3,6 +3,7 @@
 	import { mm } from '$lib/stores/moneymoney.svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { ui, monthToDateRange } from '$lib/stores/ui.svelte';
+	import { isDemoMode } from '$lib/demo';
 	import {
 		groupTransactionsByCategory,
 		computeCategoryRows,
@@ -233,7 +234,7 @@
 		<div class="flex-1 flex items-center justify-center">
 			<div class="flex flex-col items-center gap-3 text-text-muted">
 				<div class="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
-				<span class="text-sm">Verbinde mit MoneyMoney...</span>
+				<span class="text-sm">{isDemoMode ? 'Demo-Modus wird geladen...' : 'Verbinde mit MoneyMoney...'}</span>
 			</div>
 		</div>
 	{:else}
