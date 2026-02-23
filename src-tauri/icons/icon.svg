@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background gradient: deep navy to teal -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#0B1D32"/>
+      <stop offset="50%" stop-color="#0E2A3F"/>
+      <stop offset="100%" stop-color="#0C3640"/>
+    </linearGradient>
+
+    <!-- Subtle radial highlight -->
+    <radialGradient id="bgHighlight" cx="0.35" cy="0.3" r="0.65">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Bar gradient: emerald green -->
+    <linearGradient id="barGrad1" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="barGrad2" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#6EE7B7"/>
+    </linearGradient>
+    <linearGradient id="barGrad3" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+
+    <!-- Trend line gradient: golden amber -->
+    <linearGradient id="trendGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="50%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+
+    <!-- Glow filter for trend line -->
+    <filter id="trendGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Shadow filter for bars -->
+    <filter id="barShadow" x="-10%" y="-5%" width="120%" height="115%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#059669" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Dot glow -->
+    <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip for rounded rect -->
+    <clipPath id="roundClip">
+      <rect width="1024" height="1024" rx="224"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#bgHighlight)"/>
+
+  <!-- Content group (clipped) -->
+  <g clip-path="url(#roundClip)">
+
+    <!-- Subtle grid lines -->
+    <line x1="200" y1="420" x2="824" y2="420" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.5"/>
+    <line x1="200" y1="520" x2="824" y2="520" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.5"/>
+    <line x1="200" y1="620" x2="824" y2="620" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.5"/>
+    <line x1="200" y1="720" x2="824" y2="720" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.5"/>
+
+    <!-- Budget target line (dashed, golden) -->
+    <line x1="220" y1="400" x2="804" y2="400" stroke="#F59E0B" stroke-opacity="0.25" stroke-width="2.5" stroke-dasharray="12,8"/>
+
+    <!-- Bar 1 (left, medium height) -->
+    <rect x="252" y="570" width="140" height="230" rx="18" fill="url(#barGrad1)" filter="url(#barShadow)"/>
+
+    <!-- Bar 2 (center, tallest) -->
+    <rect x="442" y="358" width="140" height="442" rx="18" fill="url(#barGrad2)" filter="url(#barShadow)"/>
+
+    <!-- Bar 3 (right, medium-short) -->
+    <rect x="632" y="480" width="140" height="320" rx="18" fill="url(#barGrad3)" filter="url(#barShadow)"/>
+
+    <!-- Base line (x-axis) -->
+    <line x1="210" y1="800" x2="814" y2="800" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2"/>
+
+    <!-- Trend line (curved, golden) -->
+    <path d="M 322 554 C 370 470, 430 350, 512 342 C 594 334, 650 468, 702 464"
+          stroke="url(#trendGrad)" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#trendGlow)"/>
+
+    <!-- Trend data points -->
+    <circle cx="322" cy="554" r="11" fill="#FCD34D" filter="url(#dotGlow)"/>
+    <circle cx="322" cy="554" r="6" fill="#FFFBEB"/>
+
+    <circle cx="512" cy="342" r="11" fill="#FBBF24" filter="url(#dotGlow)"/>
+    <circle cx="512" cy="342" r="6" fill="#FFFBEB"/>
+
+    <circle cx="702" cy="464" r="11" fill="#F59E0B" filter="url(#dotGlow)"/>
+    <circle cx="702" cy="464" r="6" fill="#FFFBEB"/>
+
+    <!-- Small dollar sign accent (top-right area) -->
+    <g transform="translate(770, 220)" opacity="0.15">
+      <text font-family="SF Pro Display, Helvetica Neue, Arial, sans-serif" font-size="80" font-weight="700" fill="#34D399" text-anchor="middle">$</text>
+    </g>
+
+  </g>
+</svg>
