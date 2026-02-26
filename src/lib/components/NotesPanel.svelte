@@ -170,6 +170,12 @@
 					</li>
 				{/each}
 			</ul>
+			{#if unplannedGroups.length > 1}
+				<div class="flex items-center justify-between mt-1 pt-2 border-t border-warning/30 text-xs">
+					<span class="text-text-muted font-medium">Gesamt</span>
+					<span class="font-mono font-semibold text-warning">{formatEur(unplannedGroups.reduce((s, g) => s + g.sum, 0))}</span>
+				</div>
+			{/if}
 		{/if}
 	</div>
 
