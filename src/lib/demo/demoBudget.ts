@@ -99,6 +99,7 @@ export const DEMO_BUDGET: BudgetTemplate = {
 			'demo-cat-133': 'TÜV fällig im März — Termin vereinbart'
 		}
 	},
+	moved: {},
 	unplanned: {
 		'2026-01': {
 			'demo-cat-202': [

@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction, Scenario, ScenarioOverride, VirtualItem } from '$lib/types';
+import type { BudgetTemplate, BudgetSettings, TemplateEntry, LineItem, UnplannedTransaction, MovedTransaction, Scenario, ScenarioOverride, VirtualItem } from '$lib/types';
 import { isDemoMode, DEMO_BUDGET } from '$lib/demo';
 
 function createEmptyBudget(name: string): BudgetTemplate {
@@ -17,6 +17,7 @@ function createEmptyBudget(name: string): BudgetTemplate {
 		template: {},
 		comments: {},
 		unplanned: {},
+		moved: {},
 		scenarios: []
 	};
 }
@@ -84,6 +85,9 @@ class BudgetStore {
 			}
 			if (!loaded.unplanned) {
 				loaded.unplanned = {};
+			}
+			if (!loaded.moved) {
+				loaded.moved = {};
 			}
 			if (!loaded.scenarios) {
 				loaded.scenarios = [];
@@ -318,6 +322,49 @@ class BudgetStore {
 		const monthMap = this.current.unplanned[month];
 		if (!monthMap) return [];
 		return Object.entries(monthMap).map(([categoryUuid, transactions]) => ({ categoryUuid, transactions }));
+	}
+
+	// --- Move transaction methods ---
+
+	moveTransactions(sourceMonth: string, targetMonth: string, transactions: MovedTransaction[]) {
+		const existing = this.current.moved[sourceMonth] ?? [];
+		const existingIds = new Set(existing.map((t) => t.txId));
+		const toAdd = transactions.filter((t) => !existingIds.has(t.txId));
+		if (toAdd.length > 0) {
+			this.current.moved[sourceMonth] = [...existing, ...toAdd];
+			this._markDirty();
+		}
+	}
+
+	unmoveTransaction(sourceMonth: string, txId: number) {
+		const entries = this.current.moved[sourceMonth];
+		if (!entries) return;
+		this.current.moved[sourceMonth] = entries.filter((t) => t.txId !== txId);
+		if (this.current.moved[sourceMonth].length === 0) {
+			delete this.current.moved[sourceMonth];
+		}
+		this._markDirty();
+	}
+
+	getMovedOutIds(month: string): Set<number> {
+		const entries = this.current.moved[month];
+		return entries ? new Set(entries.map((t) => t.txId)) : new Set();
+	}
+
+	getMovedInForMonth(month: string): MovedTransaction[] {
+		const result: MovedTransaction[] = [];
+		for (const entries of Object.values(this.current.moved)) {
+			for (const tx of entries) {
+				if (tx.targetMonth === month) {
+					result.push(tx);
+				}
+			}
+		}
+		return result;
+	}
+
+	getMovedOutForMonth(month: string): MovedTransaction[] {
+		return this.current.moved[month] ?? [];
 	}
 
 	// --- Scenario methods ---

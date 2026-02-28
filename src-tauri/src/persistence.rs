@@ -16,6 +16,18 @@ pub struct UnplannedTransaction {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct MovedTransaction {
+    pub tx_id: i64,
+    pub name: String,
+    pub amount: f64,
+    pub booking_date: String,
+    pub purpose: Option<String>,
+    pub category_uuid: String,
+    pub target_month: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BudgetTemplate {
     pub name: String,
     pub version: String,
@@ -25,6 +37,8 @@ pub struct BudgetTemplate {
     pub comments: HashMap<String, HashMap<String, String>>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub unplanned: HashMap<String, HashMap<String, Vec<UnplannedTransaction>>>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub moved: HashMap<String, Vec<MovedTransaction>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scenarios: Vec<Scenario>,
 }

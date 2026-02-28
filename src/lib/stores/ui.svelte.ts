@@ -98,7 +98,7 @@ function getCurrentMonth(): string {
 	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function offsetMonth(month: string, offset: number): string {
+export function offsetMonth(month: string, offset: number): string {
 	const [year, mon] = month.split('-').map(Number);
 	const d = new Date(year, mon - 1 + offset, 1);
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
