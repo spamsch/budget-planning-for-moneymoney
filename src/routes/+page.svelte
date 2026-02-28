@@ -63,8 +63,36 @@
 		return new Set(uuids);
 	});
 
+	// Derived: adjusted transactions (filter out moved-out, inject moved-in)
+	let adjustedTransactions = $derived.by(() => {
+		const movedOutIds = budget.getMovedOutIds(ui.selectedMonth);
+		let txs = movedOutIds.size > 0
+			? mm.transactions.filter((tx) => !movedOutIds.has(tx.id))
+			: mm.transactions;
+		const movedIn = budget.getMovedInForMonth(ui.selectedMonth);
+		if (movedIn.length > 0) {
+			txs = [
+				...txs,
+				...movedIn.map((mtx) => ({
+					id: mtx.txId,
+					amount: mtx.amount,
+					currency: budget.current.settings.currency,
+					bookingDate: mtx.bookingDate,
+					valueDate: mtx.bookingDate,
+					name: mtx.name,
+					purpose: mtx.purpose,
+					categoryUuid: mtx.categoryUuid,
+					accountUuid: '',
+					booked: true,
+					checkmark: false
+				}))
+			];
+		}
+		return txs;
+	});
+
 	// Derived: transaction map
-	let txMap = $derived(groupTransactionsByCategory(mm.transactions));
+	let txMap = $derived(groupTransactionsByCategory(adjustedTransactions));
 
 	// Derived: excluded category UUIDs
 	let excludedSet = $derived(new Set(budget.current.settings.excludedCategories));

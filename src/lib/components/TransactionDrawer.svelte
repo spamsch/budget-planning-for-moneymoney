@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { CategoryBudgetRow, Transaction } from '$lib/types';
-	import { ui } from '$lib/stores/ui.svelte';
+	import { ui, offsetMonth } from '$lib/stores/ui.svelte';
 	import { budget } from '$lib/stores/budget.svelte';
 	import { formatEur, getTransactionsForCategory } from '$lib/utils/budgetCalc';
-	import { X, CircleAlert } from 'lucide-svelte';
+	import { X, CircleAlert, ArrowRight } from 'lucide-svelte';
 
 	type TxMap = Map<string, { total: number; transactions: Transaction[] }>;
 
@@ -127,6 +127,55 @@
 		selectedTxIds.clear();
 	}
 
+	// Moved-in transaction IDs for visual indicator
+	let movedInTxIds = $derived.by(() => {
+		const movedIn = budget.getMovedInForMonth(ui.selectedMonth);
+		return new Set(movedIn.map((t) => t.txId));
+	});
+
+	// Check if all selected are moved-in (for showing unmove vs move buttons)
+	let allSelectedMovedIn = $derived.by(() => {
+		if (selectedTxIds.size === 0) return false;
+		for (const id of selectedTxIds) {
+			if (!movedInTxIds.has(id)) return false;
+		}
+		return true;
+	});
+
+	function handleMoveToMonth(direction: 1 | -1) {
+		const uuid = ui.selectedCategoryUuid;
+		if (!uuid) return;
+		const sourceMonth = ui.selectedMonth;
+		const targetMonth = offsetMonth(sourceMonth, direction);
+
+		const snapshots = transactions
+			.filter((tx) => selectedTxIds.has(tx.id))
+			.map((tx) => ({
+				txId: tx.id,
+				name: tx.name,
+				amount: tx.amount,
+				bookingDate: tx.bookingDate,
+				purpose: tx.purpose,
+				categoryUuid: uuid,
+				targetMonth
+			}));
+		budget.moveTransactions(sourceMonth, targetMonth, snapshots);
+		selectedTxIds.clear();
+	}
+
+	function handleUnmove() {
+		for (const txId of selectedTxIds) {
+			// Find the source month for this moved-in transaction
+			for (const [sourceMonth, entries] of Object.entries(budget.current.moved)) {
+				if (entries.some((t) => t.txId === txId && t.targetMonth === ui.selectedMonth)) {
+					budget.unmoveTransaction(sourceMonth, txId);
+					break;
+				}
+			}
+		}
+		selectedTxIds.clear();
+	}
+
 	function formatDate(dateStr: string): string {
 		const d = new Date(dateStr);
 		return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -178,12 +227,12 @@
 				<tbody>
 					{#each transactions as tx (tx.id)}
 						<tr
-							class="transition-colors border-t border-border/50 cursor-pointer select-none {selectedTxIds.has(tx.id) ? 'bg-accent/15' : 'hover:bg-bg-row-hover'} {unplannedIds.has(tx.id) ? 'border-l-2 border-l-warning' : ''}"
+							class="transition-colors border-t border-border/50 cursor-pointer select-none {selectedTxIds.has(tx.id) ? 'bg-accent/15' : 'hover:bg-bg-row-hover'} {movedInTxIds.has(tx.id) ? 'border-l-2 border-l-accent' : unplannedIds.has(tx.id) ? 'border-l-2 border-l-warning' : ''}"
 							onclick={(e) => toggleTx(tx.id, e)}
 						>
 							<td class="py-1.5 px-4 text-text-muted whitespace-nowrap">
 								<span class="inline-flex items-center gap-1">
-									{#if unplannedIds.has(tx.id)}<CircleAlert size={12} class="text-warning shrink-0" />{/if}
+									{#if movedInTxIds.has(tx.id)}<ArrowRight size={12} class="text-accent shrink-0" />{:else if unplannedIds.has(tx.id)}<CircleAlert size={12} class="text-warning shrink-0" />{/if}
 									{formatDate(tx.bookingDate)}
 								</span>
 							</td>
@@ -203,12 +252,33 @@
 		<div class="flex items-center justify-between px-4 py-1.5 border-t border-accent/30 bg-accent/10 text-xs">
 			<span class="text-text-muted">{selectedTxIds.size} ausgewählt</span>
 			<div class="flex items-center gap-3">
-				<button
-					onclick={handleToggleUnplanned}
-					class="text-warning hover:text-warning/80 font-medium transition-colors"
-				>
-					{allSelectedMarked ? 'Markierung aufheben' : 'Als ungeplant markieren'}
-				</button>
+				{#if allSelectedMovedIn}
+					<button
+						onclick={handleUnmove}
+						class="text-accent hover:text-accent/80 font-medium transition-colors"
+					>
+						Verschiebung aufheben
+					</button>
+				{:else}
+					<button
+						onclick={() => handleMoveToMonth(-1)}
+						class="text-accent hover:text-accent/80 font-medium transition-colors"
+					>
+						← Vormonat
+					</button>
+					<button
+						onclick={() => handleMoveToMonth(1)}
+						class="text-accent hover:text-accent/80 font-medium transition-colors"
+					>
+						Nächster Monat →
+					</button>
+					<button
+						onclick={handleToggleUnplanned}
+						class="text-warning hover:text-warning/80 font-medium transition-colors"
+					>
+						{allSelectedMarked ? 'Markierung aufheben' : 'Als ungeplant markieren'}
+					</button>
+				{/if}
 				<span class="font-mono font-medium text-accent">{formatEur(selectedSum)}</span>
 			</div>
 		</div>

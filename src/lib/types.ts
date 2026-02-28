@@ -53,6 +53,16 @@ export type UnplannedTransaction = {
 	purpose: string | null;
 };
 
+export type MovedTransaction = {
+	txId: number;
+	name: string;
+	amount: number;
+	bookingDate: string;
+	purpose: string | null;
+	categoryUuid: string;
+	targetMonth: string; // YYYY-MM
+};
+
 // Budget persistence types
 export type LineItem = {
 	id: string;
@@ -85,6 +95,7 @@ export type BudgetTemplate = {
 	template: Record<string, TemplateEntry>;
 	comments: Record<string, Record<string, string>>;
 	unplanned: Record<string, Record<string, UnplannedTransaction[]>>;
+	moved: Record<string, MovedTransaction[]>;
 	scenarios: Scenario[];
 };
 
